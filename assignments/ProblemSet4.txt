@@ -1,0 +1,43 @@
+			Last revised 21-Jan-15
+
+			    Problem Set 4
+
+		 Harvard Extension School CSCI E-95:
+	   Compiler Design and Implementation - Spring 2015
+
+		    Due: Midnight on April 5, 2015
+
+1. (100 Points) Based on all the work you have completed so far, your
+lexer from Problem Set 1, your recursive descent, YACC, or Bison
+parser from Problem Set 2, and your symbol table management system
+from Problem Set 3, develop code to perform semantic analysis.  That
+is, your code should walk over the parse tree and perform type
+checking of the entire program by refering to the symbol table.
+
+After the entire parse tree and symbol table has been created as per
+Problem Set 3, your program will perform type checking of every
+expression in the program being compiled.  All appropriate conversions
+need to be applied (usual casting conversions, usual assignment
+conversions, usual unary conversions, usual binary conversions, etc.).
+The type checking should include validity of references to identifiers
+such as appropriateness of expressions used as lvalues, compatibility
+for all operators, compatibility of actual function arguments to
+formal function parameters, propagation of function return type to
+utilization of the function's return value in an expression.  Remember
+to appropriately check for no arguments and no return values for
+functions.  Any errors you detect should be flagged with emitted error
+messages.  These include parameter mismatches, return type mismatches.
+If the types of components of expressions are not *identical*, your
+compiler should add appropriate nodes into the parse tree to
+explicitly perform type conversions.  These might include conversion
+from char to short, short to int, int to long, signed to unsigned,
+etc.  If the conversions do not result in an expression with valid
+types, an error must be emitted. You should update your pretty printer
+to dump the additional explicit type conversion nodes in the parse
+tree.
+
+As always, the solution that you turn in should include a
+demonstration that your program works and has been tested.  Thus, the
+test programs you use as input and the output that your compiler
+produces should be included with your other files.  Continue to use
+the "submit" utility to turn in your completed work.

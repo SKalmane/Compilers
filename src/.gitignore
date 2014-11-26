@@ -1,0 +1,10 @@
+*.o
+*.a
+*.exe
+*~
+compiler
+scanner.c
+parser.c
+parser.h
+parser.output
+
