@@ -94,6 +94,9 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
       mips_print_print_number(output, instruction);
       break;
 
+    case IR_NO_OPERATION:
+      break;
+
     default:
       assert(0);
       break;

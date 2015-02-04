@@ -19,13 +19,14 @@ struct ir_operand {
   } data;
 };
 
-#define IR_MULTIPLY                1
-#define IR_DIVIDE                  2
-#define IR_ADD                     3
-#define IR_SUBTRACT                4
-#define IR_LOAD_IMMEDIATE          5
-#define IR_COPY                    6
-#define IR_PRINT_NUMBER            7
+#define IR_NO_OPERATION            1
+#define IR_MULTIPLY                2
+#define IR_DIVIDE                  3
+#define IR_ADD                     4
+#define IR_SUBTRACT                5
+#define IR_LOAD_IMMEDIATE          6
+#define IR_COPY                    7
+#define IR_PRINT_NUMBER            8
 struct ir_instruction {
   int kind;
   struct ir_instruction *prev, *next;

@@ -117,7 +117,11 @@ void ir_generate_for_number(struct node *number) {
 }
 
 void ir_generate_for_identifier(struct node *identifier) {
+  struct ir_instruction *instruction;
   assert(NODE_IDENTIFIER == identifier->kind);
+  instruction = ir_instruction(IR_NO_OPERATION);
+  identifier->ir = ir_section(instruction, instruction);
+  assert(NULL != identifier->data.identifier.symbol->result.ir_operand);
 }
 
 void ir_generate_for_expression(struct node *expression);
@@ -135,7 +139,7 @@ void ir_generate_for_arithmetic_binary_operation(int kind, struct node *binary_o
   ir_operand_copy(instruction, 2, node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
 
   binary_operation->ir = ir_concatenate(binary_operation->data.binary_operation.left_operand->ir,
-                                                binary_operation->data.binary_operation.right_operand->ir);
+                                        binary_operation->data.binary_operation.right_operand->ir);
   ir_append(binary_operation->ir, instruction);
   binary_operation->data.binary_operation.result.ir_operand = &instruction->operands[0];
 }
@@ -251,6 +255,7 @@ void ir_generate_for_statement_list(struct node *statement_list) {
 static void ir_print_opcode(FILE *output, int kind) {
   static char *instruction_names[] = {
     NULL,
+    "NOP",
     "MULT",
     "DIV",
     "ADD",
@@ -296,6 +301,8 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
       break;
     case IR_PRINT_NUMBER:
       ir_print_operand(output, &instruction->operands[0]);
+      break;
+    case IR_NO_OPERATION:
       break;
     default:
       assert(0);
