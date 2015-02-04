@@ -294,6 +294,7 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[2]);
       break;
+    case IR_LOAD_IMMEDIATE:
     case IR_COPY:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");

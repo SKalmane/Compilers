@@ -5,7 +5,7 @@ CXX = g++
 CXXFLAGS +=
 
 LEX = flex
-LEXFLAGS +=
+LEXFLAGS += --header-file=scanner.h
 
 BISON = bison
 BISONFLAGS += -d
@@ -34,6 +34,7 @@ clean :
 %.c : %.y
 	$(BISON) $(BISONFLAGS) -o $@ $<
 
+scanner.h : scanner.c
 
 parser.h : parser.c
 
@@ -49,7 +50,8 @@ type.o : type.c type.h symbol.h node.h
 
 ir.o : ir.c ir.h type.h symbol.h node.h
 
-mips.o : mips.h ir.h type.h symbol.h node.h
+mips.o : mips.c mips.h ir.h type.h symbol.h node.h
 
+compiler.o : compiler.c mips.h ir.h type.h symbol.h node.h parser.h scanner.h
 compiler: compiler.o parser.o scanner.o node.o symbol.o type.o ir.o mips.o
 	$(CC) -o $@ $(LDFLAGS) $^ $(LDLIBS)

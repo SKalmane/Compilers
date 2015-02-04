@@ -45,7 +45,6 @@ struct node *node_create(int node_kind) {
 struct node *node_identifier(char *text, int length)
 {
   struct node *node = node_create(NODE_IDENTIFIER);
-  fprintf(stderr, "Creating identifier node for '%s': %p\n", text, node);
   memset(node->data.identifier.name, 0, MAX_IDENTIFIER_LENGTH + 1);
   strncpy(node->data.identifier.name, text, length);
   node->data.identifier.symbol = NULL;
@@ -69,7 +68,6 @@ struct node *node_identifier(char *text, int length)
 struct node *node_number(char *text)
 {
   struct node *node = node_create(NODE_NUMBER);
-  fprintf(stderr, "Creating number node for '%s': %p\n", text, node);
 
   errno = 0;
   node->data.number.value = strtoul(text, NULL, 10);
@@ -92,8 +90,6 @@ struct node *node_binary_operation(int operation, struct node *left_operand,
                                    struct node *right_operand)
 {
   struct node *node = node_create(NODE_BINARY_OPERATION);
-  fprintf(stderr, "Creating binary operation node for %p %d %p: %p\n", left_operand, operation, right_operand, node);
-
   node->data.binary_operation.operation = operation;
   node->data.binary_operation.left_operand = left_operand;
   node->data.binary_operation.right_operand = right_operand;
@@ -105,15 +101,12 @@ struct node *node_binary_operation(int operation, struct node *left_operand,
 struct node *node_expression_statement(struct node *expression)
 {
   struct node *node = node_create(NODE_EXPRESSION_STATEMENT);
-  fprintf(stderr, "Creating expression statement node for %p: %p\n", expression, node);
-
   node->data.expression_statement.expression = expression;
   return node;
 }
 
 struct node *node_statement_list(struct node *init, struct node *statement) {
   struct node *node = node_create(NODE_STATEMENT_LIST);
-  fprintf(stderr, "Creating expression statement node for %p %p: %p\n", init, statement, node);
   node->data.statement_list.init = init;
   node->data.statement_list.statement = statement;
   return node;

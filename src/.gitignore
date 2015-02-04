@@ -1,9 +1,11 @@
 *.o
 *.a
 *.exe
+*.s
 *~
 compiler
 scanner.c
+scanner.h
 parser.c
 parser.h
 parser.output
