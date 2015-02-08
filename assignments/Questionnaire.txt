@@ -6,13 +6,13 @@
 			     Spring 2015
 
 
-Name:				Work phone number:
+Name: Shashank Kalmane		Work phone number:
 
 
-E-mail:				Home phone number:
+E-mail: skalmane@outlook.com	Home phone number: 979-229-5733
 
 
-Occupation:
+Occupation: Software Developer
 
 	If you're a full-time student, what is your department, field, and
 	    year and at which school?  Are you currently in a degree program?
@@ -20,43 +20,43 @@ Occupation:
 
 Have you taken CSCI E-10a (Formerly E-50a), CSCI E-10b (Formerly E-50b),
 CSCI E-50 (Formerly E-52), and/or CSCI E-28 (Unix Systems Programming)
-(Formerly CSCI E-215) or equivalents (specify which)?
+(Formerly CSCI E-215) or equivalents (specify which)? No
 
 
 Have you taken CSCI E-22 (Data Structures) (Formerly CSCI E-119)?
 
 	If not, how do you meet the prerequisite?
-
+	I have had multiple computer science courses, including Algorithms and Data Structures, during my undergraduate degree. 
 
 Have you taken CSCI E-124 (Data Structures and Algorithms)?
 
 	If not, how do you meet the prerequisite?
-
-
+	I have had multiple computer science courses, including Algorithms and Data Structures, during my undergraduate degree.
+	
 Are you already registered for this class?  -- If not, do you intend
-to register?
+to register? Yes, I am already registered for the class
 
 
 What additional appropriate course or work experience do you have?
-
+	I am a Software Developer who's worked in the field for the past 3 years. I have also taken CSCI E-93 the previous semester which already had extensive programming assignments.
 
 What is your math background?
-
+     I have completed my Master of Science degree in Electrical Engineering where I have had exposure to various Math courses, including, but not limited to, Linear Algebra, Probability and Statistics etc
 
 What computer languages do you know (please include assembler and
 high-level languages)?
-
+	   C, C++, Java, Python
 
 What operating systems have you used?
-
+     Windows, Linux
 
 What computers have you used?
-
+     
 
 Why are you taking the course?
-
+    As I mentioned above, my education has been primarily in Electrical Engineering while my field of work is in Computer Science. While I have been trying to catch up on the field, I believe that a grounding in something as fundamental as Compiler Technology will really help me understand Computers a lot better and will not only help me a lot in my daily work, but will also provide me a great foundation to pick up other concepts in Computer Science.
 
 If the class needs to be rescheduled, is Thursday evening acceptable?
-
+   Yes
 
 Other comments (please continue on the back):
