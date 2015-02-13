@@ -43,11 +43,13 @@ int scan_only(FILE *output) {
      * Print the scanned text. Try to use formatting but give up instead of
      * truncating if the text is too long.
      */
+    /*
     if (yyleng <= 20) {
       fprintf(output, "   text = %-20s", yytext);
     } else {
       fprintf(output, "   text = %s", yytext);
     }
+    */
 
     if (token > 0) {
       /* Found a token! */
@@ -190,9 +192,16 @@ int scan_only(FILE *output) {
 
     if (0 == strcmp("number", token_type)) {
       /* Print the type and value. */
-      fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
-              "UNSIGNED", "LONG", yylval->data.number.value);
-      /* This might be a good place to indicate overflow if it happened. */
+      if(yylval->data.number.int_type == SIGNED_INT) {
+	fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
+		"SIGNED", "INT", yylval->data.number.value);
+      } else if(yylval->data.number.int_type == UNSIGNED_LONG) {
+	fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
+		"UNSIGNED", "LONG", yylval->data.number.value);
+      } else {
+	fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
+		"NUMBER", "OVERFLOW", yylval->data.number.value);
+      }
     } else if (0 == strcmp("id", token_type)) {
       fprintf(output, "\tToken type: Identifier\tName = %s\n", yylval->data.identifier.name);
     } else if (0 == strcmp("str", token_type)) {

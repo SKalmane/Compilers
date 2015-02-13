@@ -91,6 +91,7 @@ other_grap_char $|@|`
 		 return -1;/* error, constant is out-of-bounds */
    
                *str_buf_ptr++ = result;
+	       str_count++;
               }
      
 \\[0-9]+     {
@@ -223,9 +224,28 @@ while       return WHILE;
 		BEGIN(INITIAL); return NUMBER;
 	      }
           }
-[^\\\n\']     {
+[^\\\n\'] {
               char_count++; char_val = *yytext;
-         }
+          }
+
+\\[0-7]{1,3} {
+              /* octal escape sequence */
+              unsigned int result;
+
+              (void) sscanf( yytext + 1, "%o", &result);
+     
+	      if (result > 0xff )
+		 return -1;/* error, constant is out-of-bounds */
+   
+	      char_val = result; char_count++;
+              }
+     
+\\[0-9]+     {
+             /* not an octal sequence - bad escape sequence. error */
+               fprintf(stderr, 
+		"ERROR: Bad escape sequence. Not allowed..\n"); 
+		return -1;
+             }
 \\n      char_val = '\n'; char_count++;
 \\t  char_val = '\t'; char_count++;
 \\r  char_val = '\r'; char_count++;

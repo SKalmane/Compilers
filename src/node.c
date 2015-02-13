@@ -95,14 +95,17 @@ struct node *node_number(char *text)
 
   errno = 0;
   node->data.number.value = strtoul(text, NULL, 10);
+  
   if (node->data.number.value == ULONG_MAX && ERANGE == errno) {
     /* Strtoul indicated overflow. */
-    node->data.number.overflow = true;
+    node->data.number.int_type = NUMBER_OVERFLOW;
   } else if (node->data.number.value > 4294967295ul) {
     /* Value is too large for 32-bit unsigned long type. */
-    node->data.number.overflow = true;
+    node->data.number.int_type = NUMBER_OVERFLOW;
+  } else if (node->data.number.value < 2147483647ul) {
+    node->data.number.int_type = SIGNED_INT;
   } else {
-    node->data.number.overflow = false;
+    node->data.number.int_type = UNSIGNED_LONG;
   }
 
   node->data.number.result.type = NULL;
@@ -125,8 +128,8 @@ struct node *node_character(char text)
   errno = 0;
   /* We know that the text being passed in is a single character */
   node->data.number.value = (int)text;
-  /* There is no chance of overflow since text is a 1 byte character */
-  node->data.number.overflow = false;
+  /* The number is less than 256 since text is a 1 byte character */
+  node->data.number.int_type = SIGNED_INT;
 
   node->data.number.result.type = NULL;
   node->data.number.result.ir_operand = NULL;

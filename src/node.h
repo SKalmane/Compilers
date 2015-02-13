@@ -15,6 +15,10 @@ struct type;
 #define NODE_EXPRESSION_STATEMENT            4
 #define NODE_STATEMENT_LIST                  5
 
+#define SIGNED_INT                           0
+#define UNSIGNED_LONG                        1
+#define NUMBER_OVERFLOW                      2
+
 struct result {
   struct type *type;
   struct ir_operand *ir_operand;
@@ -27,7 +31,7 @@ struct node {
   union {
     struct {
       unsigned long value;
-      bool overflow;
+      int int_type;
       struct result result;
     } number;
     struct {
