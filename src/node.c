@@ -51,6 +51,30 @@ struct node *node_identifier(char *text, int length)
   return node;
 }
 
+
+/*
+ * node_string - allocate a node to represent a string
+ *
+ * Parameters:
+ *   text - string - contains the entire string
+ *   length - integer - the length of text (not including terminating NUL)
+ *
+ * Returns a NUL-terminated string in newly allocated memory, containing the
+ *   string. Returns NULL if memory could not be allocated.
+ *
+ * Side-effects:
+ *   Memory may be allocated on the heap.
+ *
+ */
+struct node *node_string(char *text, int length)
+{
+  struct node *node = node_create(NODE_STRING);
+  memset(node->data.string.name, 0, MAX_STRING_LENGTH + 1);
+  strncpy(node->data.string.name, text, length);
+  return node;
+}
+
+
 /*
  * node_number - allocate a node to represent a number
  *
@@ -80,6 +104,29 @@ struct node *node_number(char *text)
   } else {
     node->data.number.overflow = false;
   }
+
+  node->data.number.result.type = NULL;
+  node->data.number.result.ir_operand = NULL;
+  return node;
+}
+
+/*
+ * node_character - allocate a node to represent a character
+ *
+ * Parameters:
+ *   text - char - the char value which we will store as an int
+ *
+ * Returns a node containing the value and an error flag. The value is computed by casting the char passed in into int. 
+ */
+struct node *node_character(char text)
+{
+  struct node *node = node_create(NODE_NUMBER);
+
+  errno = 0;
+  /* We know that the text being passed in is a single character */
+  node->data.number.value = (int)text;
+  /* There is no chance of overflow since text is a 1 byte character */
+  node->data.number.overflow = false;
 
   node->data.number.result.type = NULL;
   node->data.number.result.ir_operand = NULL;

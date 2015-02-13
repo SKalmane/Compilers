@@ -16,7 +16,7 @@ CPPFLAGS += -I$(GTEST_DIR)/include
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -Wall -Wextra
 
-LDLIBS += -ll -ly
+LDLIBS += -lfl -ly
 LDFLAGS =
 
 EXECS = compiler
@@ -26,7 +26,7 @@ EXECS = compiler
 all : $(EXECS)
 
 clean :
-	rm -f $(EXECS) *.o scanner.c parser.c parser.h
+	rm -f $(EXECS) *.o scanner.c parser.c parser.h parser.output
 
 %.c : %.l
 	$(LEX) $(LEXFLAGS) -o $@ $<

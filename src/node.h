@@ -7,12 +7,14 @@
 struct type;
 
 #define MAX_IDENTIFIER_LENGTH               31
-
+#define MAX_STRING_LENGTH                  509
 #define NODE_NUMBER                          0
 #define NODE_IDENTIFIER                      1
-#define NODE_BINARY_OPERATION                2
-#define NODE_EXPRESSION_STATEMENT            3
-#define NODE_STATEMENT_LIST                  4
+#define NODE_STRING                          2
+#define NODE_BINARY_OPERATION                3
+#define NODE_EXPRESSION_STATEMENT            4
+#define NODE_STATEMENT_LIST                  5
+
 struct result {
   struct type *type;
   struct ir_operand *ir_operand;
@@ -32,6 +34,9 @@ struct node {
       char name[MAX_IDENTIFIER_LENGTH + 1];
       struct symbol *symbol;
     } identifier;
+    struct {
+      char name[MAX_STRING_LENGTH + 1];
+    } string;
     struct {
       int operation;
       struct node *left_operand;
@@ -57,7 +62,9 @@ struct node {
 
 /* Constructors */
 struct node *node_number(char *text);
+struct node *node_character(char text);
 struct node *node_identifier(char *text, int length);
+struct node *node_string(char *text, int length);
 struct node *node_statement_list(struct node *list, struct node *item);
 struct node *node_binary_operation(int operation, struct node *left_operand,
                                    struct node *right_operand);
