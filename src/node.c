@@ -35,9 +35,6 @@ struct node *node_create(int node_kind) {
  *   text - string - contains the name of the identifier
  *   length - integer - the length of text (not including terminating NUL)
  *
- * Returns a NUL-terminated string in newly allocated memory, containing the
- *   name of the identifier. Returns NULL if memory could not be allocated.
- *
  * Side-effects:
  *   Memory may be allocated on the heap.
  *
@@ -55,12 +52,8 @@ struct node *node_identifier(char *text, int length)
  * node_number - allocate a node to represent a number
  *
  * Parameters:
- *   text - string - contains the numeric constant
+ *   text - string - contains the numeric literal
  *   length - integer - the length of text (not including terminating NUL)
- *
- * Returns a node containing the value and an error flag. The value is computed
- *   using strtoul. If the error flag is set, the integer constant was too large
- *   to fit in an unsigned long. Returns NULL if memory could not be allocated.
  *
  * Side-effects:
  *   Memory may be allocated on the heap.
