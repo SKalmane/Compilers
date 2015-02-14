@@ -20,7 +20,7 @@ EXECS = compiler
 all : $(EXECS)
 
 clean :
-	rm -f $(EXECS) *.o scanner.c parser.c parser.h
+	rm -f $(EXECS) *.o scanner.c scanner.h parser.c parser.h
 
 scanner.h : scanner.c
 
