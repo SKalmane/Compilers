@@ -35,6 +35,7 @@ void mips_print_number_operand(FILE *output, struct ir_operand *operand) {
 void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
   static char *opcodes[] = {
     NULL,
+    NULL,
     "mulu",
     "divu",
     "addu",
@@ -51,7 +52,7 @@ void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
 }
 
 void mips_print_copy(FILE *output, struct ir_instruction *instruction) {
-  fprintf(output, "%10s ", "ori");
+  fprintf(output, "%10s ", "or");
   mips_print_temporary_operand(output, &instruction->operands[0]);
   fputs(", ", output);
   mips_print_temporary_operand(output, &instruction->operands[1]);
@@ -67,9 +68,15 @@ void mips_print_load_immediate(FILE *output, struct ir_instruction *instruction)
 }
 
 void mips_print_print_number(FILE *output, struct ir_instruction *instruction) {
+  /* Print the number. */
   fprintf(output, "%10s %10s, %10s, %10d\n", "ori", "$v0", "$0", 1);
-  fprintf(output, "%10s %10s, %10s, ", "ori", "$a0", "$0");
+  fprintf(output, "%10s %10s, %10s, ", "or", "$a0", "$0");
   mips_print_temporary_operand(output, &instruction->operands[0]);
+  fprintf(output, "\n%10s\n", "syscall");
+
+  /* Print a newline. */
+  fprintf(output, "%10s %10s, %10s, %10d\n", "ori", "$v0", "$0", 4);
+  fprintf(output, "%10s %10s, %10s", "la", "$a0", "newline");
   fprintf(output, "\n%10s\n", "syscall");
 }
 
@@ -106,11 +113,15 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
 void mips_print_text_section(FILE *output, struct ir_section *section) {
   struct ir_instruction *instruction;
 
-  fputs("\n.text\n", output);
+  fputs("\n.data\nnewline: .asciiz \"\\n\"", output);
+  fputs("\n.text\nmain:\n", output);
 
   for (instruction = section->first; instruction != section->last->next; instruction = instruction->next) {
     mips_print_instruction(output, instruction);
   }
+
+  /* Return from main. */
+  fprintf(output, "\n%10s %10s\n", "jr", "$ra");
 }
 
 void mips_print_program(FILE *output, struct ir_section *section) {
