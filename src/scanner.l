@@ -17,6 +17,7 @@
   #define YYSTYPE struct node *
   #define YY_NO_INPUT
 
+  #include "type.h"
   #include "node.h"
   #include "parser.h"
 
