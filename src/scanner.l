@@ -80,7 +80,13 @@ other_grap_char $|@|`
                 str_count = 0;
 		return -1;
             }
-     
+
+ \\0         {
+               *str_buf_ptr++ = yytext[0]; 
+               *str_buf_ptr++ = yytext[1];
+               str_count = str_count + 2;
+             }
+
 \\[0-7]{1,3} {
               /* octal escape sequence */
               unsigned int result;
@@ -147,7 +153,7 @@ other_grap_char $|@|`
 -           return MINUS;
 %           return PERCENT;
 \+           return PLUS;
-\/          printf("Found Slash.."); return SLASH;
+\/          return SLASH;
 \?           return QUESTION;
 ~           return TILDE;
 \|           return VBAR;
@@ -205,8 +211,8 @@ while       return WHILE;
              }
 
 {number}    yylval = node_number(yytext); return NUMBER;
-{number}[l|L\u|U]   {
-  fprintf(stderr,
+{number}{letter}+   {
+                       fprintf(stderr,
 			 "ERROR: integer suffixes not allowed!\n");
                           return -1;
                      }
@@ -228,14 +234,15 @@ while       return WHILE;
               char_count++; char_val = *yytext;
           }
 
-\\[0-7]{1,3} {
+\\[0-3][0-7]{1,2} {
               /* octal escape sequence */
               unsigned int result;
 
               (void) sscanf( yytext + 1, "%o", &result);
      
-	      if (result > 0xff )
-		 return -1;/* error, constant is out-of-bounds */
+	      if (result > 0xff ) {
+		return -1;/* error, constant is out-of-bounds */
+	      }
    
 	      char_val = result; char_count++;
               }
@@ -244,7 +251,7 @@ while       return WHILE;
              /* not an octal sequence - bad escape sequence. error */
                fprintf(stderr, 
 		"ERROR: Bad escape sequence. Not allowed..\n"); 
-		return -1;
+	        return -1;
              }
 \\n      char_val = '\n'; char_count++;
 \\t  char_val = '\t'; char_count++;

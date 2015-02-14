@@ -87,7 +87,8 @@ int scan_only(FILE *output) {
           token_type = "rsvwd"; token_name = "FOR"; break;
         case GOTO:
           token_type = "rsvwd"; token_name = "GOTO"; break;
-
+        case BREAK:
+	  token_type = "rsvwd"; token_name = "BREAK"; break;
         case SEMICOLON:
           token_type = "op"; token_name = "SEMICOLON"; break;
         case ASTERISK:
@@ -154,10 +155,14 @@ int scan_only(FILE *output) {
           token_type = "op"; token_name = "GREATER_GREATER_EQUAL"; break;
         case LESS_EQUAL:
           token_type = "op"; token_name = "LESS_EQUAL"; break;
+        case LESS_LESS:
+          token_type = "op"; token_name = "LESS_LESS"; break;
         case LESS_LESS_EQUAL:
           token_type = "op"; token_name = "LESS_LESS_EQUAL"; break;
         case MINUS_EQUAL:
           token_type = "op"; token_name = "MINUS_EQUAL"; break;
+        case MINUS_MINUS:
+          token_type = "op"; token_name = "MINUS_MINUS"; break;
         case PERCENT_EQUAL:
           token_type = "op"; token_name = "PERCENT_EQUAL"; break;
         case PLUS_EQUAL:
