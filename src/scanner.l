@@ -17,6 +17,7 @@
   #define YYSTYPE struct node *
   #define YY_NO_INPUT
 
+  #include "type.h"
   #include "node.h"
   #include "parser.h"
 
@@ -234,23 +235,22 @@ while       return WHILE;
               char_count++; char_val = *yytext;
           }
 
-\\[0-3][0-7]{1,2} {
+\\[0-3][0-7]{0,2} {
               /* octal escape sequence */
               unsigned int result;
 
               (void) sscanf( yytext + 1, "%o", &result);
-     
+
 	      if (result > 0xff ) {
 		return -1;/* error, constant is out-of-bounds */
 	      }
-   
-	      char_val = result; char_count++;
+              char_val = result; char_count++;
               }
      
-\\[0-9]+     {
-             /* not an octal sequence - bad escape sequence. error */
+\\[0-9]{3,}   {
+              /* escape sequence greater than 8 bits.. */
                fprintf(stderr, 
-		"ERROR: Bad escape sequence. Not allowed..\n"); 
+		"ERROR: Escape sequence at line number %d greater than 8 bits. Not allowed..\n", yylineno); 
 	        return -1;
              }
 \\n      char_val = '\n'; char_count++;

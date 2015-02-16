@@ -1,20 +1,14 @@
 CC = gcc
 CFLAGS += -g -Wall -Wextra -pedantic
 
-CXX = g++
-CXXFLAGS +=
-
 LEX = flex
-LEXFLAGS += --header-file=scanner.h
+LFLAGS += --header-file=scanner.h
 
-BISON = bison
-BISONFLAGS += -d
+YACC = bison
+YFLAGS += -d
 
-# Flags passed to the preprocessor.
-CPPFLAGS += -I$(GTEST_DIR)/include
-
-# Flags passed to the C++ compiler.
-CXXFLAGS += -g -Wall -Wextra
+%.c : %.y
+	$(YACC) $(YFLAGS) -o $@ $<
 
 LDLIBS += -lfl -ly
 LDFLAGS =
@@ -26,13 +20,7 @@ EXECS = compiler
 all : $(EXECS)
 
 clean :
-	rm -f $(EXECS) *.o scanner.c parser.c parser.h parser.output
-
-%.c : %.l
-	$(LEX) $(LEXFLAGS) -o $@ $<
-
-%.c : %.y
-	$(BISON) $(BISONFLAGS) -o $@ $<
+	rm -f $(EXECS) *.o scanner.c scanner.h parser.c parser.h
 
 scanner.h : scanner.c
 

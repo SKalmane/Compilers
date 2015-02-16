@@ -1,4 +1,4 @@
-			Last revised 21-Jan-15
+			Last revised 3-Feb-15
 
 			    Problem Set 1
 
@@ -7,11 +7,11 @@
 
 		  Due: Midnight on February 15, 2015
 
-1. (100 Points) Using either ad hoc techniques or a lexical-analyzer
-generator such as Lex or Flex, write a lexer to return tokens from an
-input stream.  The tokens to be recognized include identifiers,
-reserved words, operators, separators, and constants.  Our tokens are
-taken from a simplified version of the ISO C language.
+1. (100 Points) Using either the lexical-analyzer generator Lex or
+Flex, write a lexer to return tokens from an input stream.  The tokens
+to be recognized include identifiers, reserved words, operators,
+separators, and constants.  Our tokens are taken from a simplified
+version of the ISO C language.
 
 The accepted input character set is composed of the 52 upper case and
 lower case alphabetic characters; the 10 decimal digits; the space,
@@ -105,36 +105,25 @@ for types:
     int	    4
     long    4
 
-If you are writing your lexer using ad hoc techniques, your program
-should appear to be a C function or C++ member function.  On each call
-it should read the minimum number of characters to be able to
-recognize and return a single token (of course, that token should be
-composed of the maximum number of characters from the input stream
-that can form a valid token).  The function should return a boolean
-indicating whether the function successfully found a token (or was at
-end-of-input).  Through parameters, the function should return an
-enumerated type indicating the type of token found (identifier,
+Your lexical analyzer will use the generated yylex function as your
+interface to the lexer.  The lexer should make available to the caller
+an enumerated type indicating the type of token found (identifier,
 reserved word, or operator) and the token as a string.  If the token
 is either a reserved word or an operator, an additional enumerated
 type will indicate which reserved word or operator was found.  If the
 token is a constant, an additional enumerated type will indicate the
 type of constant and an additional return value will contain the value
-of the constant.
-
-If you are using a lexical-analyzer generator, you should use the
-generated yylex function as your interface to the lexer.  The lexer
-should make available to the caller all the other information
-stipulated in the paragraph above by using facilities provided by the
-lexical-analyzer generator.  For example, in Lex, the code in the
-"rules" section should return the token name/value that will be
-defined in the input file to Yacc as a %token.  Before integrating
-with Yacc, the values of the token names can be defined in an
-appropriate header (i.e., .h file).  The token name/value is the value
-that Yacc will use to match against the token name specified in the
-body of a Yacc translation rule.  All other information should be
-returned via yylval which is accessible in Yacc via $<i>, the
-attribute associated with the <i>th grammar symbol in the body of a
-translation rule.
+of the constant.  All these values will be made available by using
+facilities provided by the lexical-analyzer generator.  For example,
+in Lex, the code in the "rules" section should return the token
+name/value that will be defined in the input file to Yacc as a %token.
+Before integrating with Yacc, the values of the token names can be
+defined in an appropriate header (i.e., .h file).  The token
+name/value is the value that Yacc will use to match against the token
+name specified in the body of a Yacc translation rule.  All other
+information should be returned via yylval which is accessible in Yacc
+via $<i>, the attribute associated with the <i>th grammar symbol in
+the body of a translation rule.
 
 Your lexer must be able to keep track of the line number from which
 input is being read.  This is important in order to identify the line

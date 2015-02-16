@@ -248,10 +248,13 @@ int main(int argc, char **argv) {
     }
   }
   /* Figure out whether we're using stdin/stdout or file in/file out. */
-  if (argc < 2 || !strcmp("-", argv[1])) {
+  if (optind >= argc) {
     yyin = stdin;
+  } else if (optind == argc - 1) {
+    yyin = fopen(argv[optind], "r");
   } else {
-    yyin = fopen(argv[1], "r");
+    fprintf(stdout, "Expected 1 input file, found %d.\n", argc - optind);
+    return -1;
   }
 
   if (NULL == output) {
