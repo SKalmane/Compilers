@@ -1,11 +1,11 @@
-			Last revised 21-Jan-15
+			Last revised 13-Feb-15
 
 			    Problem Set 6
 
 		 Harvard Extension School CSCI E-95:
 	   Compiler Design and Implementation - Spring 2015
 
-		     Due: Midnight on May 1, 2015
+		     Due: Midnight on May 3, 2015
 
 1. (100 Points) Based on all the work you have completed so far, your
 lexer from Problem Set 1, your recursive descent, YACC, or Bison

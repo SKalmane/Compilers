@@ -1,4 +1,4 @@
-			Last revised 3-Feb-15
+			Last revised 15-Feb-15
 
 			    Problem Set 1
 
@@ -43,6 +43,12 @@ Graphic characters:
 Whitespace is defined as any sequence of the blank (space), new line,
 vertical tab, form feed, and horizontal tab characters.
 
+Implementation of continuation of source lines (i.e., the ability to
+end a line with a backslash character immediately before the
+end-of-line marker so that it is combined with the next source line as
+one logical source line) as described in Section 2.1.2 in Harbison &
+Steele is not a required feature of your compiler.
+
 Comments are delimited by /* and */.  They are ignored by the lexer
 and are not returned as tokens.  See Section 2.2 in Harbison & Steele:
 comments are to be replaced by a single space character.
@@ -52,7 +58,9 @@ valid sequence of characters.
 
 An identifier is a sequence of letters, digits, and underscores.  An
 identifier must not begin with a digit, and it must not have the same
-spelling as a reserved word.
+spelling as a reserved word.  As stated in Harbison & Steele, Section
+2.5, your implementation must permit a minimum of 31 significant
+characters in identifiers.
 
 The reserved words are:
              do		for	return
@@ -79,12 +87,14 @@ be deemed to be an acceptable integer constant; a single '0' digit
 would otherwise be an octal integer constant.  We will not accept any
 integer suffixes (l, L, ll, LL, u, or U).  A character constant is a
 single character enclosed within single quotes.  A string constant is
-a sequence of characters enclosed within double quotes.  Within
-character and string constants, we will accept characters in backslash
-notation -- so called escape codes.  In particular, we will allow only
-octal and character escape codes in our language.  Octal escape codes
-may be one, two, or three octal digits in length.  Character escape
-code may be n, t, b, r, f, v, \, ', ", a, and ?.
+a sequence of characters enclosed within double quotes.  We are not
+requiring the implementation of string concatenation when there are
+adjacent string constants.  Within character and string constants, we
+will accept characters in backslash notation -- so called escape
+codes.  In particular, we will allow only octal and character escape
+codes in our language.  Octal escape codes may be one, two, or three
+octal digits in length.  Character escape code may be n, t, b, r, f,
+v, \, ', ", a, and ?.
 
 Our subset implementation of the C Programming Language will most
 closely follow the Standard C 1989 (also known as "C89").  Please

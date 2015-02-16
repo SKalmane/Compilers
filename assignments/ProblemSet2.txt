@@ -1,4 +1,4 @@
-			Last revised 21-Jan-15
+			Last revised 13-Feb-15
 
 			    Problem Set 2
 
@@ -9,9 +9,7 @@
 
 1. (300 Points) Using your lexer from Problem Set 1, write a simple
 parser for the applicable part of the attached grammar.  Your parser
-may either be written without using any tools (other than any tools
-you may write on your own) using recursive descent, or it may be
-written using a YACC or Bison parser generator.
+must be written using a YACC or Bison parser generator.
 
 As your compiler reads the input program being compiled, it should
 generate a parse tree in memory which represents that program.  The
@@ -23,8 +21,8 @@ build a symbol table for any identifiers declared in the input
 program.  Instead, tokens which represent identifier strings should
 simply appear at the appropriate points in the parse tree.
 
-Functions cannot be declared as arguments nor passed as arguments to a
-function.
+In our language, functions cannot be declared as arguments nor passed
+as arguments to a function.
 
 Identifiers may be declared at:
     file scope
@@ -50,8 +48,8 @@ The allowable types are:
     long	    signed long		unsigned long
     long int	    signed long int	unsigned long int
 
-The type without a "signed" or "unsigned" modifier will be considered
-to be signed.
+In all cases, a type without a "signed" or "unsigned" modifier will be
+considered to be signed.
 
 The reserved word "void" may be used only as the return type of a
 function or as the only parameter of a function.  Your implementation
@@ -94,6 +92,10 @@ messages to standard error.  After reaching the end of the input, your
 program should output to standard out a pretty print of the parse tree
 you created from the input file.
 
+In the pretty print output, parentheses should be emitted around each
+sub-expression.  For example, the expression "a = b+c/d++*e" should be
+pretty printed as "(a=(b+((c/(d++))*e)))".
+
 This is a good time to start to develop a reasonable methodology to
 recover from errors in the compiler's input stream.  It is not
 sufficent to abort the compilation process when an error is detected.
@@ -101,3 +103,5 @@ You should be able to recover from errors and continue to process as
 much of the remainder of the input stream as possible.  This is one
 area in the compilation process that will distinguish a better
 compiler from one that does not recover from errors as well.
+
+Remember to tag your git submission with ps2-submit.
