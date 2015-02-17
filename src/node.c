@@ -83,12 +83,12 @@ struct node *node_string(char *text, int length)
   if(length > MAX_STRING_LENGTH) {
     fprintf(stderr, "String length is greater than Maximum length allowed.. \n");
     /* If string length > Max String length, only display the string
-     * till the Max string length 
+     * till the Max string length
      */
     length = MAX_STRING_LENGTH;
   }
   node->data.string.length = length;
-  /* The following loop is to ensure we copy over the 
+  /* The following loop is to ensure we copy over the
    * \0 character properly
    */
   for(i = 0; i < length; i++) {
@@ -118,7 +118,7 @@ struct node *node_number(char *text)
   node->data.number.value = strtoul(text, NULL, 10);
   node->data.number.overflow = false;
   node->data.number.result.type = type_create(TYPE_BASIC);
-  
+
   if (node->data.number.value == ULONG_MAX && ERANGE == errno) {
     /* Strtoul indicated overflow. */
     node->data.number.overflow = true;
@@ -289,4 +289,3 @@ void node_print_statement_list(FILE *output, struct node *statement_list) {
   node_print_expression_statement(output, statement_list->data.statement_list.statement);
   fputs(";\n", output);
 }
-

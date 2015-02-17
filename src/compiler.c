@@ -216,7 +216,7 @@ int scan_only(FILE *output) {
 	if(yylval->data.number.result.type->data.basic.is_unsigned) {
 	  fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
 		  "UNSIGNED", "LONG", yylval->data.number.value);
-	  
+
 	} else {
 	  if(yylval->data.number.result.type->data.basic.width == TYPE_WIDTH_LONG) {
 	    fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
@@ -232,7 +232,7 @@ int scan_only(FILE *output) {
     } else if (0 == strcmp("str", token_type)) {
       fprintf(output, "\tToken type: String\tName = ");
       print_string(output, yylval->data.string.name, yylval->data.string.length);
-      fprintf(output, "\n"); 
+      fprintf(output, "\n");
     } else if (0 == strcmp("op", token_type)) {
       fprintf(output, "\tToken type: Operand\tName = %s\n", token_name);
     } else if (0 == strcmp("rsvwd", token_type)) {

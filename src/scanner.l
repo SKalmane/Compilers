@@ -72,15 +72,15 @@ other_grap_char $|@|`
                  if(error_val > 0) {
                     /* Error was found */
                     error_val = 0; str_count = 0;
-                     return -1; 
+                     return -1;
                  }
                  yylval = node_string(str_buf, str_count);
 		 str_count = 0;
                  return STRING;
             }
-   
+
 \n          {
-		fprintf(stderr, 
+		fprintf(stderr,
 		"ERROR: Multiline strings not allowed!\n");
 		error_val = 1;
                 str_count = 0;
@@ -129,7 +129,7 @@ other_grap_char $|@|`
               fprintf(stderr, "ERROR: Unrecognized escape code %s\n", yytext);
               error_val = 1; return -1;
           }
-     
+
 [^\\\n\"]+   {
                  char *yptr = yytext;
                  while ( *yptr ) {
