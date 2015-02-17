@@ -8,6 +8,7 @@
 
 #include "node.h"
 #include "symbol.h"
+#include "type.h"
 
 extern int yylineno;
 
@@ -25,6 +26,17 @@ struct node *node_create(int node_kind) {
   n->kind = node_kind;
   n->line_number = yylineno;
   n->ir = NULL;
+  return n;
+}
+
+/* Allocate and initialize a generic type. */
+struct type *type_create(int type_kind) {
+  struct type *n;
+
+  n = malloc(sizeof(struct type));
+  assert(NULL != n);
+
+  n->kind = type_kind;
   return n;
 }
 
@@ -65,9 +77,25 @@ struct node *node_identifier(char *text, int length)
  */
 struct node *node_string(char *text, int length)
 {
+  int i;
   struct node *node = node_create(NODE_STRING);
   memset(node->data.string.name, 0, MAX_STRING_LENGTH + 1);
-  strncpy(node->data.string.name, text, length);
+  if(length > MAX_STRING_LENGTH) {
+    fprintf(stderr, "String length is greater than Maximum length allowed.. \n");
+    /* If string length > Max String length, only display the string
+     * till the Max string length 
+     */
+    length = MAX_STRING_LENGTH;
+  }
+  node->data.string.length = length;
+  /* The following loop is to ensure we copy over the 
+   * \0 character properly
+   */
+  for(i = 0; i < length; i++) {
+    node->data.string.name[i] = text[i];
+  }
+  /* Wrap up the string with the NULL character at the end */
+  node->data.string.name[length] = 0;
   return node;
 }
 
@@ -88,20 +116,25 @@ struct node *node_number(char *text)
 
   errno = 0;
   node->data.number.value = strtoul(text, NULL, 10);
+  node->data.number.overflow = false;
+  node->data.number.result.type = type_create(TYPE_BASIC);
   
   if (node->data.number.value == ULONG_MAX && ERANGE == errno) {
     /* Strtoul indicated overflow. */
-    node->data.number.int_type = NUMBER_OVERFLOW;
+    node->data.number.overflow = true;
   } else if (node->data.number.value > 4294967295ul) {
     /* Value is too large for 32-bit unsigned long type. */
-    node->data.number.int_type = NUMBER_OVERFLOW;
-  } else if (node->data.number.value < 2147483647ul) {
-    node->data.number.int_type = SIGNED_INT;
+    node->data.number.overflow = true;
+  } else if (node->data.number.value < 2147483648ul) {
+    struct type *type = node->data.number.result.type;
+    type->data.basic.width = TYPE_WIDTH_INT;
+    type->data.basic.is_unsigned = false;
   } else {
-    node->data.number.int_type = UNSIGNED_LONG;
+    struct type *type = node->data.number.result.type;
+    type->data.basic.width = TYPE_WIDTH_LONG;
+    type->data.basic.is_unsigned = true;
   }
 
-  node->data.number.result.type = NULL;
   node->data.number.result.ir_operand = NULL;
   return node;
 }
@@ -112,7 +145,7 @@ struct node *node_number(char *text)
  * Parameters:
  *   text - char - the char value which we will store as an int
  *
- * Returns a node containing the value and an error flag. The value is computed by casting the char passed in into int. 
+ * Returns a node containing the value and an error flag. The value is computed by casting the char passed in into int.
  */
 struct node *node_character(char text)
 {
@@ -121,14 +154,16 @@ struct node *node_character(char text)
   errno = 0;
   /* We know that the text being passed in is a single character */
   node->data.number.value = (int)text;
-  if(text < 0) {
-    /* Take 2's complement of the number */
-    node->data.number.value = 256 + text; 
-  }
+  node->data.number.result.type = type_create(TYPE_BASIC);
+  /* if(text < 0) { */
+  /*   /\* Take 2's complement of the number *\/ */
+  /*   node->data.number.value = 256 + text;  */
+  /* } */
   /* The number is less than 256 since text is a 1 byte character */
-  node->data.number.int_type = SIGNED_INT;
+  node->data.number.overflow = false;
 
-  node->data.number.result.type = NULL;
+  node->data.number.result.type->data.basic.width = TYPE_WIDTH_CHAR;
+  node->data.number.result.type->data.basic.is_unsigned = false;
   node->data.number.result.ir_operand = NULL;
   return node;
 }

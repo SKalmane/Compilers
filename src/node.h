@@ -31,7 +31,7 @@ struct node {
   union {
     struct {
       unsigned long value;
-      int int_type;
+      bool overflow;
       struct result result;
     } number;
     struct {
@@ -40,6 +40,7 @@ struct node {
     } identifier;
     struct {
       char name[MAX_STRING_LENGTH + 1];
+      int length;
     } string;
     struct {
       int operation;

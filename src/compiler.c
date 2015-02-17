@@ -26,6 +26,17 @@ static void print_errors_from_pass(FILE *output, char *pass, int num_errors) {
           pass, num_errors, (num_errors == 1 ? "error" : "errors"));
 }
 
+static void print_string(FILE *output, char *str, int length) {
+  int i;
+  for (i = 0; i < length; i++) {
+    if (str[i] == 0) {
+      fprintf(output, "\\0");
+    } else {
+      fprintf(output, "%c", str[i]);
+    }
+  }
+}
+
 int scan_only(FILE *output) {
   /* Begin scanning. */
   int num_errors = 0;
@@ -197,20 +208,31 @@ int scan_only(FILE *output) {
 
     if (0 == strcmp("number", token_type)) {
       /* Print the type and value. */
-      if(yylval->data.number.int_type == SIGNED_INT) {
-	fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
-		"SIGNED", "INT", yylval->data.number.value);
-      } else if(yylval->data.number.int_type == UNSIGNED_LONG) {
-	fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
-		"UNSIGNED", "LONG", yylval->data.number.value);
-      } else {
+      if(yylval->data.number.result.type == NULL) {
+	/* assert(yylval->data.number.overflow);  */
 	fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
 		"NUMBER", "OVERFLOW", yylval->data.number.value);
+      } else {
+	if(yylval->data.number.result.type->data.basic.is_unsigned) {
+	  fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
+		  "UNSIGNED", "LONG", yylval->data.number.value);
+	  
+	} else {
+	  if(yylval->data.number.result.type->data.basic.width == TYPE_WIDTH_LONG) {
+	    fprintf(output, "   type = %8s %-12s   value = %-10lu\n",
+		    "SIGNED", "INT", yylval->data.number.value);
+	  } else if(yylval->data.number.result.type->data.basic.width == TYPE_WIDTH_CHAR) {
+	    fprintf(output, "   type = %10s        value = %-10c\n",
+		    "CHARACTER", (char)yylval->data.number.value);
+	  }
+	}
       }
     } else if (0 == strcmp("id", token_type)) {
       fprintf(output, "\tToken type: Identifier\tName = %s\n", yylval->data.identifier.name);
     } else if (0 == strcmp("str", token_type)) {
-      fprintf(output, "\tToken type: String\tName = %s\n", yylval->data.string.name);
+      fprintf(output, "\tToken type: String\tName = ");
+      print_string(output, yylval->data.string.name, yylval->data.string.length);
+      fprintf(output, "\n"); 
     } else if (0 == strcmp("op", token_type)) {
       fprintf(output, "\tToken type: Operand\tName = %s\n", token_name);
     } else if (0 == strcmp("rsvwd", token_type)) {
