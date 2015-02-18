@@ -162,7 +162,7 @@ void node_print_identifier(FILE *output, struct node *identifier) {
   assert(NULL != identifier);
   assert(NODE_IDENTIFIER == identifier->kind);
   fputs(identifier->data.identifier.name, output);
-  fprintf(output, "$%lx", (unsigned long)identifier->data.identifier.symbol);
+  fprintf(output, "/* %p */", identifier->data.identifier.symbol);
 }
 
 void node_print_expression(FILE *output, struct node *expression) {
