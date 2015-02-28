@@ -168,7 +168,19 @@ struct node *node_character(char text)
   return node;
 }
 
-struct node *node_binary_operation(int operation, struct node *left_operand,
+struct node *node_unary_operation(int operation, 
+                                  struct node *the_operand)
+{
+  struct node *node = node_create(NODE_UNARY_OPERATION);
+  node->data.unary_operation.operation = operation;
+  node->data.unary_operation.the_operand = the_operand;
+  node->data.unary_operation.result.type = NULL;
+  node->data.unary_operation.result.ir_operand = NULL;
+  return node;
+}
+
+struct node *node_binary_operation(struct node *left_operand,
+                                   int operation,
                                    struct node *right_operand)
 {
   struct node *node = node_create(NODE_BINARY_OPERATION);
@@ -177,6 +189,21 @@ struct node *node_binary_operation(int operation, struct node *left_operand,
   node->data.binary_operation.right_operand = right_operand;
   node->data.binary_operation.result.type = NULL;
   node->data.binary_operation.result.ir_operand = NULL;
+  return node;
+}
+
+/* The only ternary operation we support is expr ? expr : expr */
+
+struct node *node_ternary_operation(struct node *first_operand,
+                                    struct node *second_operand,
+                                    struct node *third_operand)
+{
+  struct node *node = node_create(NODE_TERNARY_OPERATION);
+  node->data.ternary_operation.first_operand = first_operand;
+  node->data.ternary_operation.second_operand = second_operand;
+  node->data.ternary_operation.third_operand = third_operand;
+  node->data.ternary_operation.result.type = NULL;
+  node->data.ternary_operation.result.ir_operand = NULL;
   return node;
 }
 
@@ -207,7 +234,7 @@ struct node *node_initialized_decl(struct node *declarator, struct node *initial
   struct node *node = node_create(NODE_INITIALIZED_DECL);
   node->data.initialized_decl.declarator = declarator;
   node->data.initialized_decl.initializer = initializer;
-  
+  return node;
 }
 
 struct node *node_declarator(int typeOfDeclarator) {
@@ -256,19 +283,19 @@ struct node *node_type_specifier(int typeOfTypeSpecifier,
 
 struct node *node_signed_type_specifier(int typeOfSignedSpecifier) {
   struct node *node = node_create(NODE_SIGNED_TYPE_SPECIFIER);
-  node->data.signed_specifier.typeOfSignedSpecifier = typeOfSignedSpecifier;
+  node->data.signed_type_specifier.typeOfSignedSpecifier = typeOfSignedSpecifier;
   return node;
 }
 
 struct node *node_unsigned_type_specifier(int typeOfUnsignedSpecifier) {
   struct node *node = node_create(NODE_UNSIGNED_TYPE_SPECIFIER);
-  node->data.signed_specifier.typeOfUnsignedSpecifier = typeOfUnsignedSpecifier;
+  node->data.unsigned_type_specifier.typeOfUnsignedSpecifier = typeOfUnsignedSpecifier;
   return node;
 }
 
 struct node *node_character_type_specifier(int typeOfCharacterSpecifier) {
   struct node *node = node_create(NODE_CHARACTER_TYPE_SPECIFIER);
-  node->data.signed_specifier.typeOfCharacterSpecifier = typeOfCharacterSpecifier;
+  node->data.character_type_specifier.typeOfCharacterSpecifier = typeOfCharacterSpecifier;
   return node;
 }
 
@@ -277,6 +304,16 @@ struct node *node_statement_list(struct node *init, struct node *statement) {
   node->data.statement_list.init = init;
   node->data.statement_list.statement = statement;
   return node;
+}
+
+struct node *node_expr(struct node *expr1, 
+                       struct node *expr2,
+                       int type_of_expr) {
+    struct node *node = node_create(NODE_EXPR);
+    node->data.expr.expr2 = expr1;
+    node->data.expr.expr2 = expr2;
+    node->data.expr.type_of_expr = type_of_expr;
+    return node;
 }
 
 struct result *node_get_result(struct node *expression) {
@@ -305,7 +342,32 @@ void node_print_binary_operation(FILE *output, struct node *binary_operation) {
     "/",    /*  1 = BINOP_DIVISION */
     "+",    /*  2 = BINOP_ADDITION */
     "-",    /*  3 = BINOP_SUBTRACTION */
-    "=",    /*  4 = BINOP_ASSIGN */
+    "%",    /* BINOP_REMAINDER                                   4 */
+    "=",    /*  5 = BINOP_ASSIGN */
+    "+=",    /*  6 = BINOP_ASSIGN_PLUS_EQUAL */
+    "-=",    /*  7 = BINOP_ASSIGN_MINUS_EQUAL */
+    "*=",    /*  8 = BINOP_ASSIGN_ASTERISK_EQUAL */
+    "/=",    /*  9 = BINOP_ASSIGN_SLASH_EQUAL */
+    "%=",    /*  10 = BINOP_ASSIGN_PERCENT_EQUAL */
+    "<<=",   /* BINOP_ASSIGN_LESS_LESS_EQUAL = 11 */
+    ">>=",   /* BINOP_ASSIGN_GREATER_GREATER_EQUAL               12 */
+    "&=",    /* BINOP_ASSIGN_AMPERSAND_EQUAL                     13 */
+    "^=",    /* BINOP_ASSIGN_CARET_EQUAL                         14 */
+    "|=",    /* BINOP_ASSIGN_VBAR_EQUAL                          15 */
+    "||",    /* BINOP_LOGICAL_OR_EXPR                            16 */
+    "&&",    /* BINOP_LOGICAL_AND_EXPR                           17 */
+    "|",     /* BINOP_BITWISE_OR_EXPR                            18 */
+    "^",     /* BINOP_BITWISE_XOR_EXPR                           19 */
+    "&",     /* BINOP_BITWISE_AND_EXPR                           20 */
+    "==",    /* BINOP_IS_EQUAL_TO                                21 */
+    "!=",    /* BINOP_NOT_EQUAL_TO                               22 */
+    "<",     /* BINOP_LESS_THAN                                  23 */
+    "<=",    /* BINOP_LESS_THAN_OR_EQUAL_TO                      24 */
+    ">",     /* BINOP_GREATER_THAN                               25 */
+    ">=",    /* BINOP_GREATER_THAN_OR_EQUAL_TO                   26 */
+    "<<",    /* BINOP_SHIFT_LEFT                                 27 */
+    ">>",    /* BINOP_SHIFT_RIGHT                                28 */
+    ",",     /* BINOP_SEQUENTIAL_EVALUATION                      29 */    
     NULL
   };
 
@@ -372,5 +434,41 @@ void node_print_statement_list(FILE *output, struct node *statement_list) {
     node_print_statement_list(output, statement_list->data.statement_list.init);
   }
   node_print_expression_statement(output, statement_list->data.statement_list.statement);
+  fputs(";\n", output);
+}
+
+void node_print_assignment_expr(FILE *output, struct node *assignment_expr) {
+    if(NODE_BINARY_OPERATION == assignment_expr->kind) {
+        node_print_binary_operation(output, assignment_expr);
+    } else {
+        fprintf(output, "This is a conditional expression..");
+    }
+}
+
+void node_print_expr(FILE *output, struct node *expr) {
+  assert(NODE_EXPR == expr->kind);
+
+  switch (expr->data.expr.type_of_expr) {
+    case BASE_EXPR:
+      if(NULL != expr->data.expr.expr1) {
+          fprintf(output, "blah1");
+          node_print_expr(output, expr->data.expr.expr1);
+      }
+      node_print_assignment_expr(output, expr->data.expr.expr2);
+      fprintf(output, "blah2");
+      break;
+    case SUBSCRIPT_EXPR:
+      /* node_print_postfix_expr(output, expr->data.expr.expr1); */
+      fputs("[", output);
+      if(NULL != expr->data.expr.expr2) {
+          node_print_expr(output, expr->data.expr.expr2);
+      }
+      fprintf(output, "bleh");
+      fputs("]", output);
+    default:
+      assert(0);
+      break;
+  }
+
   fputs(";\n", output);
 }

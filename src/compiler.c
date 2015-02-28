@@ -312,7 +312,8 @@ int main(int argc, char **argv) {
   }
   if (0 == strcmp("parser", stage)) {
     fprintf(stdout, "=============== PARSE TREE ===============\n");
-    node_print_statement_list(stdout, root_node);
+    /* node_print_statement_list(stdout, root_node); */
+    node_print_expr(stdout, root_node);
     return 0;
   }
 
@@ -326,7 +327,8 @@ int main(int argc, char **argv) {
   symbol_print_table(stdout, &symbol_table);
   if (0 == strcmp("symbol", stage)) {
     fprintf(stdout, "=============== PARSE TREE ===============\n");
-    node_print_statement_list(stdout, root_node);
+    /* node_print_statement_list(stdout, root_node); */
+    node_print_expr(stdout, root_node);
     return 0;
   }
 
@@ -336,7 +338,8 @@ int main(int argc, char **argv) {
     return 4;
   }
   fprintf(stdout, "=============== PARSE TREE ===============\n");
-  node_print_statement_list(stdout, root_node);
+  /* node_print_statement_list(stdout, root_node); */
+  node_print_expr(stdout, root_node);
   if (0 == strcmp("parser", stage)) {
     return 0;
   }
