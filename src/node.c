@@ -118,7 +118,7 @@ struct node *node_number(char *text)
   node->data.number.value = strtoul(text, NULL, 10);
   node->data.number.overflow = false;
   node->data.number.result.type = type_create(TYPE_BASIC);
-
+  
   if (node->data.number.value == ULONG_MAX && ERANGE == errno) {
     /* Strtoul indicated overflow. */
     node->data.number.overflow = true;
@@ -184,6 +184,91 @@ struct node *node_expression_statement(struct node *expression)
 {
   struct node *node = node_create(NODE_EXPRESSION_STATEMENT);
   node->data.expression_statement.expression = expression;
+  return node;
+}
+
+struct node *node_decl(struct node *decl_specifier,
+		       struct node *init_decl_list) {
+  struct node *node = node_create(NODE_DECLARATOR);
+  node->data.decl.decl_specifier = decl_specifier;
+  node->data.decl.init_decl_list = init_decl_list;
+  return node;
+}
+
+struct node *node_initialized_decl_list(struct node *initialized_decl_list,
+					struct node* initialized_decl) {
+  struct node *node = node_create(NODE_INITIALIZED_DECL_LIST);
+  node->data.initialized_decl_list.initialized_decl_list = initialized_decl_list;
+  node->data.initialized_decl_list.initialized_decl = initialized_decl;
+  return node;
+}
+
+struct node *node_initialized_decl(struct node *declarator, struct node *initializer) {
+  struct node *node = node_create(NODE_INITIALIZED_DECL);
+  node->data.initialized_decl.declarator = declarator;
+  node->data.initialized_decl.initializer = initializer;
+  
+}
+
+struct node *node_declarator(int typeOfDeclarator) {
+  struct node *node = node_create(NODE_DECLARATOR);
+  node->data.declarator.typeOfDeclarator = typeOfDeclarator;
+  return node;
+}
+
+struct node *node_pointer_declarator(struct node* pointer,
+				struct node* direct_declarator) {
+  struct node* node = node_create(NODE_POINTER_DECLARATOR);
+  node->data.pointer_declarator.pointer = pointer;
+  node->data.pointer_declarator.direct_declarator = direct_declarator;
+  return node;
+}
+
+struct node *node_pointer(struct node *pointer) {
+  struct node *node = node_create(NODE_POINTER);
+  node->data.pointer.pointer = pointer;
+  return node;
+}
+
+struct node *node_parameter_list(struct node *parameter_list,
+				 struct node *parameter_decl) {
+  struct node *node = node_create(NODE_PARAMETER_LIST);
+  node->data.parameter_list.parameter_list = parameter_list;
+  node->data.parameter_list.parameter_decl = parameter_decl;
+  return node;
+}
+
+struct node *node_function_declarator(struct node *direct_declarator,
+				      struct node *parameter_list) {
+  struct node *node = node_create(NODE_FUNCTION_DECLARATOR);
+  node->data.function_declarator.direct_declarator = direct_declarator;
+  node->data.function_declarator.parameter_list = parameter_list;
+  return node;
+}
+
+struct node *node_type_specifier(int typeOfTypeSpecifier,
+				 struct node *type_specifier_node) {
+  struct node *node = node_create(NODE_TYPE_SPECIFIER);
+  node->data.type_specifier.type_specifier_node = type_specifier_node;
+  node->data.type_specifier.typeOfSpecifier = typeOfTypeSpecifier;
+  return node;
+}
+
+struct node *node_signed_type_specifier(int typeOfSignedSpecifier) {
+  struct node *node = node_create(NODE_SIGNED_TYPE_SPECIFIER);
+  node->data.signed_specifier.typeOfSignedSpecifier = typeOfSignedSpecifier;
+  return node;
+}
+
+struct node *node_unsigned_type_specifier(int typeOfUnsignedSpecifier) {
+  struct node *node = node_create(NODE_UNSIGNED_TYPE_SPECIFIER);
+  node->data.signed_specifier.typeOfUnsignedSpecifier = typeOfUnsignedSpecifier;
+  return node;
+}
+
+struct node *node_character_type_specifier(int typeOfCharacterSpecifier) {
+  struct node *node = node_create(NODE_CHARACTER_TYPE_SPECIFIER);
+  node->data.signed_specifier.typeOfCharacterSpecifier = typeOfCharacterSpecifier;
   return node;
 }
 
