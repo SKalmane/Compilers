@@ -185,8 +185,8 @@ void type_assign_in_expression(struct node *expression) {
 }
 
 void type_assign_in_expression_statement(struct node *expression_statement) {
-  assert(NODE_EXPRESSION_STATEMENT == expression_statement->kind);
-  type_assign_in_expression(expression_statement->data.expression_statement.expression);
+  assert(NODE_STATEMENT == expression_statement->kind);
+  type_assign_in_expression(expression_statement->data.statement.expression);
 }
 
 void type_assign_in_statement_list(struct node *statement_list) {

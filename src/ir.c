@@ -221,14 +221,14 @@ void ir_generate_for_expression(struct node *expression) {
 
 void ir_generate_for_expression_statement(struct node *expression_statement) {
   struct ir_instruction *instruction;
-  struct node *expression = expression_statement->data.expression_statement.expression;
-  assert(NODE_EXPRESSION_STATEMENT == expression_statement->kind);
+  struct node *expression = expression_statement->data.statement.expression;
+  assert(NODE_STATEMENT == expression_statement->kind);
   ir_generate_for_expression(expression);
 
   instruction = ir_instruction(IR_PRINT_NUMBER);
   ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand);
 
-  expression_statement->ir = ir_copy(expression_statement->data.expression_statement.expression->ir);
+  expression_statement->ir = ir_copy(expression_statement->data.statement.expression->ir);
   ir_append(expression_statement->ir, instruction);
 }
 

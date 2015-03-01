@@ -79,9 +79,9 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
   }
 }
 void symbol_add_from_expression_statement(struct symbol_table *table, struct node *expression_statement) {
-  assert(NODE_EXPRESSION_STATEMENT == expression_statement->kind);
+  assert(NODE_STATEMENT == expression_statement->kind);
 
-  symbol_add_from_expression(table, expression_statement->data.expression_statement.expression);
+  symbol_add_from_expression(table, expression_statement->data.statement.expression);
 }
 
 void symbol_add_from_statement_list(struct symbol_table *table, struct node *statement_list) {

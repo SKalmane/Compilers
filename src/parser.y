@@ -33,86 +33,53 @@
 %token MINUS_EQUAL MINUS_MINUS PERCENT_EQUAL PLUS_EQUAL PLUS_PLUS
 %token SLASH_EQUAL VBAR_EQUAL VBAR_VBAR
 
- /* %start translation_unit */
-%start program
+%start translation_unit
+/* %start program */
 
 %%
 
-character_type_specifiers
-  : CHAR
-      {node_character_type_specifier(CHARACTER_TYPE);}
-  | SIGNED CHAR
-      {node_character_type_specifier(SIGNED_TYPE);}  
-  | UNSIGNED CHAR
-      {node_character_type_specifier(UNSIGNED_TYPE);}    
-;
-
-unsigned_type_specifiers
-  : UNSIGNED SHORT
-      {node_unsigned_type_specifier(SHORT_INT);}
-  | UNSIGNED SHORT INT
-      {node_unsigned_type_specifier(SHORT_INT);}  
-  | UNSIGNED
-      {node_unsigned_type_specifier(NONE_INT);}
-  | UNSIGNED INT
-      {node_unsigned_type_specifier(NONE_INT);}
-  | UNSIGNED LONG
-      {node_unsigned_type_specifier(LONG_INT);}
-  | UNSIGNED LONG INT
-      {node_unsigned_type_specifier(LONG_INT);}  
-;
-
-signed_type_specifiers
-  : SHORT
-      {node_signed_type_specifier(SHORT_INT);}
-  | SHORT INT
-      {node_signed_type_specifier(SHORT_INT);}
-  | SIGNED SHORT
-      {node_signed_type_specifier(SHORT_INT);}
-  | SIGNED SHORT INT
-      {node_signed_type_specifier(SHORT_INT);}
-  | INT
-      {node_signed_type_specifier(NONE_INT);}
-  | SIGNED INT
-      {node_signed_type_specifier(NONE_INT);}
-  | SIGNED
-      {node_signed_type_specifier(NONE_INT);}
-  | LONG
-      {node_signed_type_specifier(LONG_INT);}
-  | LONG INT
-      {node_signed_type_specifier(LONG_INT);}  
-  | SIGNED LONG
-      {node_signed_type_specifier(LONG_INT);}  
-  | SIGNED LONG INT
-      {node_signed_type_specifier(LONG_INT);}  
-;
-
 type_specifiers
-  : signed_type_specifiers
-  { $$ = node_type_specifier(SIGNED_TYPE, $1); }
-  | unsigned_type_specifiers
-      { $$ = node_type_specifier(UNSIGNED_TYPE, $1); }  
-  | character_type_specifiers
-      { $$ = node_type_specifier(CHARACTER_TYPE, $1); }  
+  : SHORT
+      {node_type_specifier(SIGNED_SHORT_INT);}
+  | SHORT INT
+      {node_type_specifier(SIGNED_SHORT_INT);}
+  | SIGNED SHORT
+      {node_type_specifier(SIGNED_SHORT_INT);}
+  | SIGNED SHORT INT
+      {node_type_specifier(SIGNED_SHORT_INT);}
+  | INT
+      {node_type_specifier(SIGNED_INT);}
+  | SIGNED INT
+      {node_type_specifier(SIGNED_INT);}
+  | SIGNED
+      {node_type_specifier(SIGNED_INT);}
+  | LONG
+      {node_type_specifier(SIGNED_LONG_INT);}
+  | LONG INT
+      {node_type_specifier(SIGNED_LONG_INT);}  
+  | SIGNED LONG
+      {node_type_specifier(SIGNED_LONG_INT);}  
+  | SIGNED LONG INT
+      {node_type_specifier(SIGNED_LONG_INT);}  
+  | UNSIGNED SHORT
+      {node_type_specifier(UNSIGNED_SHORT_INT);}
+  | UNSIGNED SHORT INT
+      {node_type_specifier(UNSIGNED_SHORT_INT);}  
+  | UNSIGNED
+      {node_type_specifier(UNSIGNED_INT);}
+  | UNSIGNED INT
+      {node_type_specifier(UNSIGNED_INT);}
+  | UNSIGNED LONG
+      {node_type_specifier(UNSIGNED_LONG_INT);}
+  | UNSIGNED LONG INT
+      {node_type_specifier(UNSIGNED_LONG_INT);} 
+  | CHAR
+      {node_type_specifier(CHARACTER_TYPE);}
+  | SIGNED CHAR
+      {node_type_specifier(SIGNED_CHARACTER_TYPE);}  
+  | UNSIGNED CHAR
+      {node_type_specifier(UNSIGNED_CHARACTER_TYPE);} 
 ;
-/* void_type_specifier */
-/*   : VOID */
-/* ; */
-/* decl_specifiers */
-/*   : type_specifiers */
-/*   | void_type_specifier */
-/* ; */
-
-/* pointer */
-/*   : ASTERISK */
-/*       {$$ = node_pointer(NULL); } */
-/*   | ASTERISK pointer */
-/*       {$$ = node_pointer($2); }   */
-/* ; */
-
-/* simple_declarator */
-/*   : IDENTIFIER */
-/* ; */
 
 multiplicative_expr
   : cast_expr
@@ -194,10 +161,15 @@ parenthesized_expr
       { $$ = $2; }
 ;
 
+constant
+  : NUMBER
+  | STRING
+;
+
 primary_expr
   : IDENTIFIER
   | parenthesized_expr
-  /*   | ( CONSTANT ) xxx: Implement this.. */
+  | constant
 ;
 
 subscript_expr
@@ -208,7 +180,7 @@ subscript_expr
 expression_list
   : assignment_expr
   | expression_list COMMA assignment_expr
-      { $$ = node_expr($1, $3, EXPRESSION_STATEMENT); }
+      { $$ = node_expr($1, $3, EXPRESSION_LIST); }
 ;
 
 function_call
@@ -238,13 +210,14 @@ postfix_expr
 
 type_name
   : type_specifiers
-  /* | type_specifiers abstract_declarator xxx */
+  | type_specifiers abstract_declarator
+      { $$ = node_expr($1, $2, CONCAT_EXPR); }
 ;
 
 cast_expr
   : unary_expr
   | unary_casting_expr cast_expr
-      { $$ = node_expr($1, $2, CAST_EXPR); }
+      { $$ = node_expr($1, $2, CONCAT_EXPR); }
 ;
 
 unary_casting_expr
@@ -334,107 +307,269 @@ expr
   : assignment_expr
       { $$ = node_expr(NULL, $1, BASE_EXPR); }  
   | expr COMMA assignment_expr 
-      { $$ = node_expr($1, $3, BASE_EXPR); }
+      { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
 ;
 
 conditional_expr
   : logical_or_expr
   | logical_or_expr QUESTION expr COLON conditional_expr
-      { $$ = node_ternary_operation($1, $2, $3); }
+      { $$ = node_ternary_operation($1, $3, $5); }
 ;
 
-/* constant_expr */
-/*   : conditional_expr */
-/* ; */
+constant_expr
+  : conditional_expr
+;
 
-/* abstract_direct_declarator */
-/*   : LEFT_PAREN abstract_declarator RIGHT_PAREN */
-/*       { $$ = $2; } */
-/*   | LEFT_SQUARE RIGHT_SQUARE /\* xxx: Needs to be corrected *\/ */
-/*   | LEFT_SQUARE constant_expr RIGHT_SQUARE */
-/*       { $$ = $2; } */
-/*   | abstract_direct_declarator LEFT_SQUARE RIGHT_SQUARE */
-/*   | abstract_direct_declarator LEFT_SQUARE constant_expr RIGHT_SQUARE */
-/*       { $$ = $3; } /\* xxx: Needs to be corrected *\/ */
-/* ; */
+abstract_direct_declarator
+  : LEFT_PAREN abstract_declarator RIGHT_PAREN
+      { $$ = node_abstract_decl(NULL, $2, PARENTHESIZED_ABSTRACT_DECL); }
+  | LEFT_SQUARE RIGHT_SQUARE
+      { $$ = node_abstract_decl(NULL, NULL, SQUARE_BRACKETS_ABSTRACT_DECL); }
+  | LEFT_SQUARE constant_expr RIGHT_SQUARE
+      { $$ = node_abstract_decl(NULL, $2, SQUARE_BRACKETS_ABSTRACT_DECL); }
+  | abstract_direct_declarator LEFT_SQUARE RIGHT_SQUARE
+      { $$ = node_abstract_decl($1, NULL, SQUARE_BRACKETS_ABSTRACT_DECL); }
+  | abstract_direct_declarator LEFT_SQUARE constant_expr RIGHT_SQUARE
+      { $$ = node_abstract_decl($1, $3, SQUARE_BRACKETS_ABSTRACT_DECL); }
+;
 
-/* abstract_declarator */
-/*   : pointer */
-/*   | abstract_direct_declarator */
-/*   | pointer abstract_direct_declarator */
-/* ; */
+abstract_declarator
+  : pointer
+  | abstract_direct_declarator
+  | pointer abstract_direct_declarator
+      {$$ = node_expr($1, $2, CONCAT_EXPR); }
+;
 
-/* parameter_decl */
-/*   : type_specifiers declarator */
-/*   | type_specifiers */
-/*   | type_specifiers abstract_declarator */
-/* ; */
+parameter_decl
+  : type_specifiers declarator
+      {$$ = node_expr($1, $2, CONCAT_EXPR); }
+  | type_specifiers
+  | type_specifiers abstract_declarator
+      {$$ = node_expr($1, $2, CONCAT_EXPR); }
+;
 
-/* parameter_list */
-/*   : parameter_decl */
-/*       {$$ = node_parameter_list(NULL, $1); } */
-/*   | parameter_list COMMA parameter_decl */
-/*       {$$ = node_parameter_list($1, $2); } */
-/* ; */
+pointer
+  : ASTERISK
+      {$$ = node_pointer(NULL); }
+  | ASTERISK pointer
+      {$$ = node_pointer($2); }
+;
 
-/* function_declarator */
-/*   : direct_declarator LEFT_PAREN parameter_list RIGHT_PAREN */
-/*       {$$ = node_function_declarator($1, $3); } */
-/* ; */
+parameter_list
+  : parameter_decl
+  | parameter_list COMMA parameter_decl
+      { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
+;
 
-/* direct_declarator */
-/*   : simple_declarator */
-/*   | LEFT_PAREN declarator RIGHT_PAREN */
-/*       { $$ = $2; } */
-/*   | function_declarator */
-/*         /\* | array_declarator xxx: needs to be defined *\/ */
-/* ; */
+function_declarator
+  : direct_declarator LEFT_PAREN parameter_list RIGHT_PAREN
+      { $$ = node_expr($1, $3, FUNCTION_CALL); }
+;
 
-/* pointer_declarator */
-/*   : pointer direct_declarator */
-/*       {$$ = node_pointer_declarator($1, $2); } */
-/* ; */
+declarator
+  : pointer_declarator
+  | direct_declarator
+;
 
-/* declarator */
-/*   : pointer_declarator */
-/*       { $$ = node_declarator(POINTER_DECLARATOR); } */
-/*   | direct_declarator */
-/*       { $$ = node_declarator(DIRECT_DECLARATOR); }   */
-/* ; */
+simple_declarator
+  : IDENTIFIER
+;
 
-/* initialized_decl */
-/*   : declarator */
-/*       { $$ = node_initialized_decl($1, NULL); } */
-/*   /\* | declarator EQUAL initializer xxx: Needs to be defined *\/ */
-/*   /\*     { $$ = node_initialized_decl($1, initializer); }   *\/ */
-/* ; */
+array_declarator
+  : direct_declarator LEFT_SQUARE RIGHT_SQUARE
+      { $$ = node_abstract_decl($1, NULL, SQUARE_BRACKETS_ABSTRACT_DECL); } /* xxx Need to rename */
+  | direct_declarator LEFT_SQUARE constant_expr RIGHT_SQUARE
+      { $$ = node_abstract_decl($1, $3, SQUARE_BRACKETS_ABSTRACT_DECL); }
+;
 
-/* initialized_decl_list */
-/*   : initialized_decl */
-/*       { $$ = node_initialized_decl_list(NULL, $1); } */
-/*   | initialized_decl_list COMMA initialized_decl */
-/*       { $$ = node_initialized_decl_list($1, $3); } */
-/* ; */
+direct_declarator
+  : simple_declarator
+  | LEFT_PAREN declarator RIGHT_PAREN
+      { $$ = $2; }
+  | function_declarator
+  | array_declarator
+;
 
-/* decl */
-/*   : decl_specifiers initialized_decl_list SEMICOLON */
-/*       { $$ = node_decl($1, $2); } */
-/* ; */
+pointer_declarator
+  : pointer direct_declarator
+      {$$ = node_expr($1, $2, CONCAT_EXPR); }
+;
 
-/* top_level_decl */
-/*   : decl */
-/*     /\*  | function_definition *\/ */
-/* ; */
+initialized_decl
+  : declarator
+;
+
+initialized_decl_list
+  : initialized_decl
+  | initialized_decl_list COMMA initialized_decl
+      { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
+;
+
+void_type_specifier
+  : VOID
+;
+
+decl_specifiers
+  : type_specifiers
+  | void_type_specifier
+      { $$ = node_type_specifier(VOID_TYPE); }
+;
+
+expression_statement
+  : expr SEMICOLON
+      { $$ = node_statement(NULL, $1, EXPRESSION_STATEMENT_TYPE); }
+;
+
+labeled_statement
+  : IDENTIFIER COLON statement 
+      { $$ = node_statement($3, $1, LABELED_STATEMENT_TYPE); }
+;
+
+conditional_statement
+  : IF LEFT_PAREN expr RIGHT_PAREN statement
+  | IF LEFT_PAREN expr RIGHT_PAREN statement ELSE statement
+;
+
+while_statement
+  : WHILE LEFT_PAREN expr RIGHT_PAREN statement
+      { $$ = node_statement($5, $3, WHILE_STATEMENT_TYPE); }
+;
+
+do_statement
+  : DO statement WHILE LEFT_PAREN expr RIGHT_PAREN SEMICOLON
+      { $$ = node_statement($2, $5, DO_STATEMENT_TYPE); }
+;
+
+initial_clause
+  : expr
+  | decl
+;
+
+for_expr
+  : LEFT_PAREN SEMICOLON SEMICOLON RIGHT_PAREN
+      { $$ = node_for_expr(NULL, NULL, NULL); }
+  | LEFT_PAREN SEMICOLON SEMICOLON expr RIGHT_PAREN
+      { $$ = node_for_expr(NULL, NULL, $4); }
+  | LEFT_PAREN SEMICOLON expr SEMICOLON RIGHT_PAREN
+      { $$ = node_for_expr(NULL, $3, NULL); }
+  | LEFT_PAREN SEMICOLON expr SEMICOLON expr RIGHT_PAREN
+      { $$ = node_for_expr(NULL, $3, $5); }
+  | LEFT_PAREN initial_clause SEMICOLON SEMICOLON RIGHT_PAREN
+      { $$ = node_for_expr($2, NULL, NULL); }
+  | LEFT_PAREN initial_clause SEMICOLON SEMICOLON expr RIGHT_PAREN
+      { $$ = node_for_expr($2, NULL, $5); }
+  | LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON RIGHT_PAREN
+      { $$ = node_for_expr($2, $4, NULL); }
+  | LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON expr RIGHT_PAREN
+      { $$ = node_for_expr($2, $4, $6); }
+;
+
+for_statement
+  : FOR for_expr statement
+      { $$ = node_statement($3, $2, FOR_STATEMENT_TYPE); }
+;
+
+iterative_statement
+  : while_statement
+  | do_statement
+  | for_statement
+;
+
+break_statement
+  : BREAK SEMICOLON
+      { $$ = node_statement(NULL, NULL, BREAK_STATEMENT_TYPE); }
+;
+
+continue_statement
+  : CONTINUE SEMICOLON
+      { $$ = node_statement(NULL, NULL, CONTINUE_STATEMENT_TYPE); }
+;
+
+return_statement
+  : RETURN SEMICOLON
+      { $$ = node_statement(NULL, NULL, RETURN_STATEMENT_TYPE); }
+  | RETURN expr SEMICOLON
+      { $$ = node_statement(NULL, $2, RETURN_STATEMENT_TYPE); }
+;
+
+goto_statement
+  : GOTO IDENTIFIER SEMICOLON
+      { $$ = node_statement(NULL, $2, GOTO_STATEMENT_TYPE); }
+;
+
+null_statement
+  : SEMICOLON
+      { $$ = node_statement(NULL, NULL, NULL_STATEMENT_TYPE); }
+;
+
+statement
+  : expression_statement
+  | labeled_statement
+  | compound_statement
+  | conditional_statement
+  | iterative_statement
+  | break_statement
+  | continue_statement
+  | return_statement
+  | goto_statement
+  | null_statement
+;
+
+declaration_or_statement
+  : decl
+  | statement
+;
+
+declaration_or_statement_list 
+  : declaration_or_statement
+  | declaration_or_statement_list declaration_or_statement
+      { $$ = node_statement_list($1, $2); }
+;
+
+decl
+  : decl_specifiers initialized_decl_list SEMICOLON
+      { $$ = node_expr($1, $2, DECL_STATEMENT); }
+;
+
+function_def_specifier
+  : type_specifiers declarator
+      { $$ = node_expr($2, $1, CONCAT_EXPR); }
+  | declarator
+;
+
+compound_statement
+  : LEFT_CURLY RIGHT_CURLY
+      { $$ = node_statement(NULL, NULL, COMPOUND_STATEMENT_TYPE); }
+  | LEFT_CURLY declaration_or_statement_list RIGHT_CURLY
+      { $$ = node_statement($2, NULL, COMPOUND_STATEMENT_TYPE); }
+;
+
+function_definition
+  : function_def_specifier compound_statement
+      { $$ = node_expr($1, $2, CONCAT_EXPR); }
+;
+
+top_level_decl
+  : decl
+  | function_definition
+;
 
 /* translation_unit */
 /*   : top_level_decl */
 /*       { root_node = $1; } */
+/*   /\* | translation_unit top_level_decl *\/ */
+/*   /\*     { root_node = node_expr($1, $2, CONCAT_EXPR); } *\/ */
 /* ; */
 
-program
-  : expr
-          { root_node = $1; }
+translation_unit
+  : function_definition
+      { root_node = $1; }
 ;
+
+/* program */
+/*   : expr */
+/*           { root_node = $1; } */
+/* ; */
 
 %%
 

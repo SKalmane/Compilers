@@ -18,34 +18,30 @@ struct type;
 #define NODE_UNARY_OPERATION                 3
 #define NODE_BINARY_OPERATION                4
 #define NODE_TERNARY_OPERATION               5
-#define NODE_EXPRESSION_STATEMENT            6
+#define NODE_STATEMENT                       6
 #define NODE_STATEMENT_LIST                  7
 #define NODE_DECL                            8
 #define NODE_TYPE_SPECIFIER                  9
-#define NODE_SIGNED_TYPE_SPECIFIER           10
-#define NODE_UNSIGNED_TYPE_SPECIFIER         11
-#define NODE_CHARACTER_TYPE_SPECIFIER        12
-#define NODE_INITIALIZED_DECL_LIST           13
-#define NODE_INITIALIZED_DECL                14
-#define NODE_DECLARATOR                      15
-#define NODE_POINTER_DECLARATOR              16
-#define NODE_POINTER                         17
-#define NODE_DIRECT_DECLARATOR               18
-#define NODE_FUNCTION_DECLARATOR             19
-#define NODE_PARAMETER_LIST                  20
-#define NODE_EXPR                  21
+#define NODE_POINTER                         10
+#define NODE_EXPR                            11
+#define NODE_ABSTRACT_DECL                   12
+#define NODE_FOR_EXPR                        13
 /* ================================================== */
 
-#define SIGNED_TYPE                            0
-#define UNSIGNED_TYPE                          1
-#define CHARACTER_TYPE                         2
+/* ================================================== */
+/* =========== Type specifier enums === ============= */
 
-/* Define the various types used to 
- * construct the type_specifier nodes
- */
-#define NONE_INT                             0
-#define SHORT_INT                            1
-#define LONG_INT                             2
+#define SIGNED_SHORT_INT                            0
+#define SIGNED_INT                                  1
+#define SIGNED_LONG_INT                             2
+#define UNSIGNED_SHORT_INT                          3
+#define UNSIGNED_INT                                4
+#define UNSIGNED_LONG_INT                           5
+#define CHARACTER_TYPE                              6
+#define SIGNED_CHARACTER_TYPE                       7
+#define UNSIGNED_CHARACTER_TYPE                     8
+#define VOID_TYPE                                   9
+/* ================================================== */
 
 /* The two kinds of declarators are
  * pointer declarators and direct declarators
@@ -94,8 +90,10 @@ struct node {
       struct result result;
     } ternary_operation;
     struct {
+      struct node *statement;
       struct node *expression;
-    } expression_statement;
+        int type_of_statement;
+    } statement;
     struct {
       struct node *init;
       struct node *statement;
@@ -110,44 +108,21 @@ struct node {
       struct node *init_decl_list;
     } decl;
     struct {
-      struct node *type_specifier_node;
-      int typeOfSpecifier;
+      int kind_of_type_specifier;
     } type_specifier;
-    struct {
-      int typeOfSignedSpecifier;
-    } signed_type_specifier;
-    struct {
-      int typeOfUnsignedSpecifier;
-    } unsigned_type_specifier;
-    struct {
-      int typeOfCharacterSpecifier;
-    } character_type_specifier;
-    struct {
-      struct node *initialized_decl_list;
-      struct node *initialized_decl;
-    } initialized_decl_list;
-    struct {
-      struct node *declarator;
-      struct node *initializer;
-    } initialized_decl;
-    struct {
-      int typeOfDeclarator;
-    } declarator;
-    struct {
-      struct node *pointer;
-      struct node *direct_declarator;
-    } pointer_declarator;
     struct {
       struct node *pointer;
     } pointer;
     struct {
-      struct node *direct_declarator;
-      struct node *parameter_list;
-    } function_declarator; 
+      struct node *abstract_direct_declarator;
+      struct node *expression;
+      int type_of_abstract_decl;
+    } abstract_decl;
     struct {
-      struct node *parameter_list;
-      struct node *parameter_decl;
-    } parameter_list; 
+      struct node *initial_clause;
+      struct node *expr1;
+      struct node *expr2;
+    } for_expr;
   } data;
 };
 
@@ -228,9 +203,33 @@ struct node {
 /* Types of expressions */
 #define BASE_EXPR                                         0
 #define SUBSCRIPT_EXPR                                    1
-#define EXPRESSION_STATEMENT                              2
+#define EXPRESSION_LIST                                   2
 #define FUNCTION_CALL                                     3
-#define CAST_EXPR                                         4
+#define CONCAT_EXPR                                       4
+#define DECL_STATEMENT                                    5
+#define COMMA_SEPARATED_STATEMENT                         6
+/* ======================================================*/
+
+/* ======================================================*/
+/* Types of abstract declarations */
+#define PARENTHESIZED_ABSTRACT_DECL                       0
+#define SQUARE_BRACKETS_ABSTRACT_DECL                     1
+/* ======================================================*/
+
+/* ======================================================*/
+/* Types of statements */
+#define EXPRESSION_STATEMENT_TYPE                        0
+#define LABELED_STATEMENT_TYPE                            1
+#define COMPOUND_STATEMENT_TYPE                           2
+#define WHILE_STATEMENT_TYPE                              3
+#define DO_STATEMENT_TYPE                                 4
+#define FOR_STATEMENT_TYPE                                5
+#define ITERATIVE_STATEMENT_TYPE                          6
+#define BREAK_STATEMENT_TYPE                              7
+#define CONTINUE_STATEMENT_TYPE                           8
+#define RETURN_STATEMENT_TYPE                             9
+#define GOTO_STATEMENT_TYPE                              10
+#define NULL_STATEMENT_TYPE                              11
 /* ======================================================*/
 
 /* Constructors */
@@ -246,7 +245,8 @@ struct node *node_binary_operation(struct node *left_operand, int operation,
 struct node *node_ternary_operation(struct node *first_operand,
                                     struct node *second_operand,
                                     struct node *third_operand);
-struct node *node_expression_statement(struct node *expression);
+struct node *node_statement(struct node *statement, struct node *expression, 
+                            int type_of_statement);
 struct node *node_expr(struct node *expr1, struct node *expr2, int type_of_expr);
 
 struct node *node_statement_list(struct node *init, struct node *statement);
@@ -268,20 +268,16 @@ struct node *node_parameter_list(struct node *parameter_list,
 struct node *node_function_declarator(struct node *direct_declarator,
 				      struct node *parameter_list);
 
-struct node *node_type_specifier(int typeOfTypeSpecifier,
-				 struct node *type_specifier_node);
-struct node *node_signed_type_specifier(int typeOfSignedSpecifier);
-struct node *node_unsigned_type_specifier(int typeOfUnsignedSpecifier);
-struct node *node_unsigned_type_specifier(int typeOfUnsignedSpecifier);
-struct node *node_character_type_specifier(int typeOfCharacterSpecifier);
+struct node *node_type_specifier(int kind_of_type_specifier); 
+struct node *node_for_expr(struct node *initial_clause, struct node *expr1, 
+                           struct node *expr2); 
+
+struct node *node_abstract_decl(struct node *abstract_direct_declarator, 
+                                struct node *expression, int type_of_abstract_decl); 
 
 struct result *node_get_result(struct node *expression);
 
 void node_print_statement_list(FILE *output, struct node *statement_list);
-
-void node_print_logical_or_expr(FILE *output, struct node *logical_or_expr);
-
-void node_print_assignment_expr(FILE *output, struct node *assignment_expr);
 
 void node_print_expr(FILE *output, struct node *expr);
 #endif
