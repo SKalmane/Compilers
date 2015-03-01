@@ -279,6 +279,8 @@ struct result *node_get_result(struct node *expression);
 
 void node_print_statement_list(FILE *output, struct node *statement_list);
 
+void node_print_logical_or_expr(FILE *output, struct node *logical_or_expr);
+
 void node_print_assignment_expr(FILE *output, struct node *assignment_expr);
 
 void node_print_expr(FILE *output, struct node *expr);

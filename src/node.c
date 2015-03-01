@@ -437,11 +437,26 @@ void node_print_statement_list(FILE *output, struct node *statement_list) {
   fputs(";\n", output);
 }
 
+void node_print_logical_or_expr(FILE *output, struct node *logical_or_expr) {
+  fprintf(output,"Logical Or Expression "); 
+}
+
 void node_print_assignment_expr(FILE *output, struct node *assignment_expr) {
     if(NODE_BINARY_OPERATION == assignment_expr->kind) {
         node_print_binary_operation(output, assignment_expr);
-    } else {
+    } else if(NODE_TERNARY_OPERATION == assignment_expr->kind) {
+      fputs("( ", output);
+      struct node *first_operand = assignment_expr->data.ternary_operation.first_operand;
+      node_print_logical_or_expr(output, first_operand);
+      fputs(" )  ? ", output);
+      fputs("( ", output);
+      node_print_expr(output, assignment_expr->data.ternary_operation.second_operand);
+      fputs(") : ", output);
+      
         fprintf(output, "This is a conditional expression..");
+    } else {
+        fprintf(output, "Unsure what type of expr this is..");
+	assert(0);
     }
 }
 
@@ -455,7 +470,6 @@ void node_print_expr(FILE *output, struct node *expr) {
           node_print_expr(output, expr->data.expr.expr1);
       }
       node_print_assignment_expr(output, expr->data.expr.expr2);
-      fprintf(output, "blah2");
       break;
     case SUBSCRIPT_EXPR:
       /* node_print_postfix_expr(output, expr->data.expr.expr1); */
