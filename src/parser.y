@@ -33,52 +33,53 @@
 %token MINUS_EQUAL MINUS_MINUS PERCENT_EQUAL PLUS_EQUAL PLUS_PLUS
 %token SLASH_EQUAL VBAR_EQUAL VBAR_VBAR
 
-%start translation_unit
-/* %start program */
+%start program
 
 %%
 
 type_specifiers
   : SHORT
-      {node_type_specifier(SIGNED_SHORT_INT);}
+      { $$ = node_type_specifier(SIGNED_SHORT_INT);}
   | SHORT INT
-      {node_type_specifier(SIGNED_SHORT_INT);}
+      { $$ = node_type_specifier(SIGNED_SHORT_INT);}
   | SIGNED SHORT
-      {node_type_specifier(SIGNED_SHORT_INT);}
+      { $$ = node_type_specifier(SIGNED_SHORT_INT);}
   | SIGNED SHORT INT
-      {node_type_specifier(SIGNED_SHORT_INT);}
+      { $$ = node_type_specifier(SIGNED_SHORT_INT);}
   | INT
-      {node_type_specifier(SIGNED_INT);}
+      { $$ = node_type_specifier(SIGNED_INT);}
   | SIGNED INT
-      {node_type_specifier(SIGNED_INT);}
+      { $$ = node_type_specifier(SIGNED_INT);}
   | SIGNED
-      {node_type_specifier(SIGNED_INT);}
+      { $$ = node_type_specifier(SIGNED_INT);}
   | LONG
-      {node_type_specifier(SIGNED_LONG_INT);}
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}
   | LONG INT
-      {node_type_specifier(SIGNED_LONG_INT);}  
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}  
   | SIGNED LONG
-      {node_type_specifier(SIGNED_LONG_INT);}  
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}  
   | SIGNED LONG INT
-      {node_type_specifier(SIGNED_LONG_INT);}  
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}  
   | UNSIGNED SHORT
-      {node_type_specifier(UNSIGNED_SHORT_INT);}
+      { $$ = node_type_specifier(UNSIGNED_SHORT_INT);}
   | UNSIGNED SHORT INT
-      {node_type_specifier(UNSIGNED_SHORT_INT);}  
+      { $$ = node_type_specifier(UNSIGNED_SHORT_INT);}  
   | UNSIGNED
-      {node_type_specifier(UNSIGNED_INT);}
+      { $$ = node_type_specifier(UNSIGNED_INT);}
   | UNSIGNED INT
-      {node_type_specifier(UNSIGNED_INT);}
+      { $$ = node_type_specifier(UNSIGNED_INT);}
   | UNSIGNED LONG
-      {node_type_specifier(UNSIGNED_LONG_INT);}
+      { $$ = node_type_specifier(UNSIGNED_LONG_INT);}
   | UNSIGNED LONG INT
-      {node_type_specifier(UNSIGNED_LONG_INT);} 
+      { $$ = node_type_specifier(UNSIGNED_LONG_INT);} 
   | CHAR
-      {node_type_specifier(CHARACTER_TYPE);}
+      { $$ = node_type_specifier(CHARACTER_TYPE);}
   | SIGNED CHAR
-      {node_type_specifier(SIGNED_CHARACTER_TYPE);}  
+      { $$ = node_type_specifier(SIGNED_CHARACTER_TYPE);}  
   | UNSIGNED CHAR
-      {node_type_specifier(UNSIGNED_CHARACTER_TYPE);} 
+      { $$ = node_type_specifier(UNSIGNED_CHARACTER_TYPE);}
+  | VOID
+      { $$ = node_type_specifier(VOID_TYPE);}
 ;
 
 multiplicative_expr
@@ -303,11 +304,15 @@ assignment_expr
       { $$ = node_binary_operation($1, BINOP_ASSIGN_VBAR_EQUAL, $3); }
 ;
 
-expr
+comma_expr
   : assignment_expr
       { $$ = node_expr(NULL, $1, BASE_EXPR); }  
   | expr COMMA assignment_expr 
       { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
+;
+
+expr
+  : comma_expr
 ;
 
 conditional_expr
@@ -405,14 +410,8 @@ initialized_decl_list
       { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
 ;
 
-void_type_specifier
-  : VOID
-;
-
 decl_specifiers
   : type_specifiers
-  | void_type_specifier
-      { $$ = node_type_specifier(VOID_TYPE); }
 ;
 
 expression_statement
@@ -532,9 +531,8 @@ decl
 ;
 
 function_def_specifier
-  : type_specifiers declarator
-      { $$ = node_expr($2, $1, CONCAT_EXPR); }
-  | declarator
+  : decl_specifiers declarator
+      { $$ = node_expr($1, $2, CONCAT_EXPR); }
 ;
 
 compound_statement
@@ -554,22 +552,17 @@ top_level_decl
   | function_definition
 ;
 
-/* translation_unit */
-/*   : top_level_decl */
-/*       { root_node = $1; } */
-/*   /\* | translation_unit top_level_decl *\/ */
-/*   /\*     { root_node = node_expr($1, $2, CONCAT_EXPR); } *\/ */
-/* ; */
-
 translation_unit
-  : function_definition
-      { root_node = $1; }
+  : top_level_decl
+      { $$ = node_translation_unit(NULL, $1); }  
+  | translation_unit top_level_decl
+      { $$ = node_translation_unit($1, $2); }
 ;
 
-/* program */
-/*   : expr */
-/*           { root_node = $1; } */
-/* ; */
+program
+  : translation_unit
+  { root_node = node_translation_unit($1, NULL); }
+;
 
 %%
 

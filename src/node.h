@@ -26,6 +26,8 @@ struct type;
 #define NODE_EXPR                            11
 #define NODE_ABSTRACT_DECL                   12
 #define NODE_FOR_EXPR                        13
+#define NODE_TRANSLATION_UNIT                14
+#define NODE_IF_STATEMENT                    15
 /* ================================================== */
 
 /* ================================================== */
@@ -123,6 +125,15 @@ struct node {
       struct node *expr1;
       struct node *expr2;
     } for_expr;
+    struct {
+      struct node *translation_unit;
+      struct node *top_level_decl;
+    } translation_unit;
+    struct {
+      struct node *expr;
+      struct node *if_statement;
+      struct node *else_statement;
+    } if_statement;
   } data;
 };
 
@@ -249,6 +260,7 @@ struct node *node_statement(struct node *statement, struct node *expression,
                             int type_of_statement);
 struct node *node_expr(struct node *expr1, struct node *expr2, int type_of_expr);
 
+struct node *node_translation_unit(struct node *translation_unit, struct node *top_level_decl);
 struct node *node_statement_list(struct node *init, struct node *statement);
 struct node *node_decl(struct node *decl_specifier,
 		       struct node *init_decl_list);
@@ -275,9 +287,10 @@ struct node *node_for_expr(struct node *initial_clause, struct node *expr1,
 struct node *node_abstract_decl(struct node *abstract_direct_declarator, 
                                 struct node *expression, int type_of_abstract_decl); 
 
+struct node *node_if_statement(struct node *expr, struct node *if_statement, struct node *else_statement);
+
 struct result *node_get_result(struct node *expression);
 
 void node_print_statement_list(FILE *output, struct node *statement_list);
-
-void node_print_expr(FILE *output, struct node *expr);
+void node_print_translation_unit(FILE *output, struct node *translation_unit);
 #endif

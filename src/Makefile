@@ -5,7 +5,7 @@ LEX = flex
 LFLAGS += --header-file=scanner.h
 
 YACC = bison
-YFLAGS += -d
+YFLAGS += -d -v
 
 %.c : %.y
 	$(YACC) $(YFLAGS) -o $@ $<
