@@ -1,10 +1,6 @@
-int read_int();
-void read_string(char *s, int n);
-void print_int(int i);
 void print_string(char *s);
 int atoi(char *s);
 void strcpy(char *dest, char *src);
-void print_int_hex(int i);
 
 char caesar_char(char c, int shift) {
   int base;
