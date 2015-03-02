@@ -55,15 +55,15 @@ type_specifiers
   | LONG
       { $$ = node_type_specifier(SIGNED_LONG_INT);}
   | LONG INT
-      { $$ = node_type_specifier(SIGNED_LONG_INT);}  
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}
   | SIGNED LONG
-      { $$ = node_type_specifier(SIGNED_LONG_INT);}  
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}
   | SIGNED LONG INT
-      { $$ = node_type_specifier(SIGNED_LONG_INT);}  
+      { $$ = node_type_specifier(SIGNED_LONG_INT);}
   | UNSIGNED SHORT
       { $$ = node_type_specifier(UNSIGNED_SHORT_INT);}
   | UNSIGNED SHORT INT
-      { $$ = node_type_specifier(UNSIGNED_SHORT_INT);}  
+      { $$ = node_type_specifier(UNSIGNED_SHORT_INT);}
   | UNSIGNED
       { $$ = node_type_specifier(UNSIGNED_INT);}
   | UNSIGNED INT
@@ -71,11 +71,11 @@ type_specifiers
   | UNSIGNED LONG
       { $$ = node_type_specifier(UNSIGNED_LONG_INT);}
   | UNSIGNED LONG INT
-      { $$ = node_type_specifier(UNSIGNED_LONG_INT);} 
+      { $$ = node_type_specifier(UNSIGNED_LONG_INT);}
   | CHAR
       { $$ = node_type_specifier(CHARACTER_TYPE);}
   | SIGNED CHAR
-      { $$ = node_type_specifier(SIGNED_CHARACTER_TYPE);}  
+      { $$ = node_type_specifier(SIGNED_CHARACTER_TYPE);}
   | UNSIGNED CHAR
       { $$ = node_type_specifier(UNSIGNED_CHARACTER_TYPE);}
   | VOID
@@ -92,7 +92,7 @@ multiplicative_expr
       { $$ = node_binary_operation($1, BINOP_REMAINDER, $3); }
 ;
 
-additive_expr 
+additive_expr
   : multiplicative_expr
   | additive_expr PLUS multiplicative_expr
       { $$ = node_binary_operation($1, BINOP_ADDITION, $3); }
@@ -306,8 +306,8 @@ assignment_expr
 
 comma_expr
   : assignment_expr
-      { $$ = node_expr(NULL, $1, BASE_EXPR); }  
-  | expr COMMA assignment_expr 
+      { $$ = node_expr(NULL, $1, ASSIGNMENT_EXPR); }
+  | expr COMMA assignment_expr
       { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
 ;
 
@@ -371,9 +371,15 @@ function_declarator
       { $$ = node_expr($1, $3, FUNCTION_CALL); }
 ;
 
+/* declarator */
+/*   : pointer_declarator */
+/*   | direct_declarator */
+/* ; */
+
 declarator
-  : pointer_declarator
-  | direct_declarator
+  : direct_declarator
+  | ASTERISK declarator
+      { $$ = node_pointer_declarator($2); }
 ;
 
 simple_declarator
@@ -395,10 +401,10 @@ direct_declarator
   | array_declarator
 ;
 
-pointer_declarator
-  : pointer direct_declarator
-      {$$ = node_expr($1, $2, CONCAT_EXPR); }
-;
+/* pointer_declarator */
+/*   : pointer direct_declarator */
+/*       {$$ = node_expr($1, $2, CONCAT_EXPR); } */
+/* ; */
 
 initialized_decl
   : declarator
@@ -420,7 +426,7 @@ expression_statement
 ;
 
 labeled_statement
-  : IDENTIFIER COLON statement 
+  : IDENTIFIER COLON statement
       { $$ = node_statement($3, $1, LABELED_STATEMENT_TYPE); }
 ;
 
@@ -428,7 +434,7 @@ conditional_statement
   : IF LEFT_PAREN expr RIGHT_PAREN statement
       { $$ = node_if_statement($3, $5, NULL); }
   | IF LEFT_PAREN expr RIGHT_PAREN statement ELSE statement
-      { $$ = node_if_statement($3, $5, $7); }  
+      { $$ = node_if_statement($3, $5, $7); }
 ;
 
 while_statement
@@ -521,7 +527,7 @@ declaration_or_statement
   | statement
 ;
 
-declaration_or_statement_list 
+declaration_or_statement_list
   : declaration_or_statement
   | declaration_or_statement_list declaration_or_statement
       { $$ = node_statement_list($1, $2); }
@@ -556,7 +562,7 @@ top_level_decl
 
 translation_unit
   : top_level_decl
-      { $$ = node_translation_unit(NULL, $1); }  
+      { $$ = node_translation_unit(NULL, $1); }
   | translation_unit top_level_decl
       { $$ = node_translation_unit($1, $2); }
 ;
@@ -571,4 +577,3 @@ program
 void yyerror(char const *s) {
   fprintf(stderr, "ERROR at line %d: %s\n", yylineno, s);
 }
-

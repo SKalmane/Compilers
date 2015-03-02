@@ -28,6 +28,7 @@ struct type;
 #define NODE_FOR_EXPR                        13
 #define NODE_TRANSLATION_UNIT                14
 #define NODE_IF_STATEMENT                    15
+#define NODE_POINTER_DECLARATOR              16
 /* ================================================== */
 
 /* ================================================== */
@@ -44,12 +45,6 @@ struct type;
 #define UNSIGNED_CHARACTER_TYPE                     8
 #define VOID_TYPE                                   9
 /* ================================================== */
-
-/* The two kinds of declarators are
- * pointer declarators and direct declarators
- */
-#define POINTER_DECLARATOR                   0
-#define DIRECT_DECLARATOR                    1
 
 struct result {
   struct type *type;
@@ -134,6 +129,9 @@ struct node {
       struct node *if_statement;
       struct node *else_statement;
     } if_statement;
+    struct {
+      struct node *declarator;
+    } pointer_declarator;
   } data;
 };
 
@@ -202,7 +200,7 @@ struct node {
 #define BINOP_GREATER_THAN                               25
 #define BINOP_GREATER_THAN_OR_EQUAL_TO                   26
 #define BINOP_SHIFT_LEFT                                 27
-#define BINOP_SHIFT_RIGHT                                28                      
+#define BINOP_SHIFT_RIGHT                                28
 
 /* Sequential Evaluation */
 #define BINOP_SEQUENTIAL_EVALUATION                      29 /* Comma */
@@ -212,7 +210,7 @@ struct node {
 
 /* ======================================================*/
 /* Types of expressions */
-#define BASE_EXPR                                         0
+#define ASSIGNMENT_EXPR                                   0
 #define SUBSCRIPT_EXPR                                    1
 #define EXPRESSION_LIST                                   2
 #define FUNCTION_CALL                                     3
@@ -256,7 +254,7 @@ struct node *node_binary_operation(struct node *left_operand, int operation,
 struct node *node_ternary_operation(struct node *first_operand,
                                     struct node *second_operand,
                                     struct node *third_operand);
-struct node *node_statement(struct node *statement, struct node *expression, 
+struct node *node_statement(struct node *statement, struct node *expression,
                             int type_of_statement);
 struct node *node_expr(struct node *expr1, struct node *expr2, int type_of_expr);
 
@@ -271,8 +269,7 @@ struct node *node_initialized_decl(struct node *declarator,
 
 struct node *node_declarator(int typeOfDeclarator);
 
-struct node *node_pointer_declarator(struct node* pointer,
-				  struct node* direct_declarator);
+struct node *node_pointer_declarator(struct node* declarator);
 
 struct node *node_pointer(struct node *pointer);
 struct node *node_parameter_list(struct node *parameter_list,
@@ -280,17 +277,16 @@ struct node *node_parameter_list(struct node *parameter_list,
 struct node *node_function_declarator(struct node *direct_declarator,
 				      struct node *parameter_list);
 
-struct node *node_type_specifier(int kind_of_type_specifier); 
-struct node *node_for_expr(struct node *initial_clause, struct node *expr1, 
-                           struct node *expr2); 
+struct node *node_type_specifier(int kind_of_type_specifier);
+struct node *node_for_expr(struct node *initial_clause, struct node *expr1,
+                           struct node *expr2);
 
-struct node *node_abstract_decl(struct node *abstract_direct_declarator, 
-                                struct node *expression, int type_of_abstract_decl); 
+struct node *node_abstract_decl(struct node *abstract_direct_declarator,
+                                struct node *expression, int type_of_abstract_decl);
 
 struct node *node_if_statement(struct node *expr, struct node *if_statement, struct node *else_statement);
 
 struct result *node_get_result(struct node *expression);
 
-void node_print_statement_list(FILE *output, struct node *statement_list);
 void node_print_translation_unit(FILE *output, struct node *translation_unit);
 #endif

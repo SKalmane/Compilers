@@ -286,6 +286,12 @@ struct node *node_if_statement(struct node *expr,
   return node;
 }
 
+struct node *node_pointer_declarator(struct node *declarator) {
+    struct node *node = node_create(NODE_POINTER_DECLARATOR);
+    node->data.pointer_declarator.declarator = declarator;
+    return node;
+}
+
 struct result *node_get_result(struct node *expression) {
   switch (expression->kind) {
     case NODE_NUMBER:
@@ -304,7 +310,7 @@ struct result *node_get_result(struct node *expression) {
  * PARSE TREE PRETTY PRINTER FUNCTIONS *
  ***************************************/
 
-void node_print_expression(FILE *output, struct node *expression);
+void node_print_handler(FILE *output, struct node *expression);
 
 void node_print_binary_operation(FILE *output, struct node *binary_operation) {
   static const char *binary_operators[] = {
@@ -344,11 +350,11 @@ void node_print_binary_operation(FILE *output, struct node *binary_operation) {
   assert(NULL != binary_operation && NODE_BINARY_OPERATION == binary_operation->kind);
 
   fputs("(", output);
-  node_print_expression(output, binary_operation->data.binary_operation.left_operand);
+  node_print_handler(output, binary_operation->data.binary_operation.left_operand);
   fputs(" ", output);
   fputs(binary_operators[binary_operation->data.binary_operation.operation], output);
   fputs(" ", output);
-  node_print_expression(output, binary_operation->data.binary_operation.right_operand);
+  node_print_handler(output, binary_operation->data.binary_operation.right_operand);
   fputs(")", output);
 }
 
@@ -363,7 +369,7 @@ void node_print_unary_operation(FILE *output, struct node *unary_operation) {
         "+",            /*  UNARYOP_PLUS                                      6 */
         "&",            /*  UNARYOP_ADDRESS_OF                                7 */
         "*",            /*  UNARYOP_INDIRECTION                               8 */
-        "()",           /*  UNARYOP_CASTING                                   9  xxx */
+        "",             /*  UNARYOP_CASTING                                   9  xxx */
         "[]",           /*  UNARYOP_SUBSCRIPTING                             10  xxx */
         "()",           /*  UNARYOP_FUNCTION_CALL                            11 xxx */
         ".",            /*  UNARYOP_DIRECT_SELECTION                         13 /\* a.data *\/ */
@@ -376,15 +382,13 @@ void node_print_unary_operation(FILE *output, struct node *unary_operation) {
   assert(NULL != unary_operation && NODE_UNARY_OPERATION == unary_operation->kind);
 
   fputs("(", output);
-  fputs(" ", output);
   if(unary_operation->data.unary_operation.operation <= 9) { /* prefix operators */
       fputs(unary_operators[unary_operation->data.unary_operation.operation], output);
-  }
-  node_print_expression(output, unary_operation->data.unary_operation.the_operand);
-  if(unary_operation->data.unary_operation.operation > 9) { /* prefix operators */
+      node_print_handler(output, unary_operation->data.unary_operation.the_operand);
+  } else { /* postfix operators */
+      node_print_handler(output, unary_operation->data.unary_operation.the_operand);
       fputs(unary_operators[unary_operation->data.unary_operation.operation], output);
   }
-  fputs(" ", output);
   fputs(")", output);
 }
 
@@ -412,6 +416,8 @@ void node_print_string(FILE *output, struct node *string) {
     for (i = 0; i < length; i++) {
         if (str[i] == 0) {
             fputs("\\0", output);
+        } else if(str[i] == '\\') {
+            fputs("\\", output);
         } else {
             fprintf(output, "%c", str[i]);
         }
@@ -422,13 +428,13 @@ void node_print_string(FILE *output, struct node *string) {
 void node_print_ternary_operation(FILE *output, struct node *ternary_operation) {
 
     fputs("( ", output);
-    node_print_expression(output, ternary_operation->data.ternary_operation.first_operand);
+    node_print_handler(output, ternary_operation->data.ternary_operation.first_operand);
     fputs(" )  ? ", output);
     fputs("( ", output);
-    node_print_expression(output, ternary_operation->data.ternary_operation.second_operand);
+    node_print_handler(output, ternary_operation->data.ternary_operation.second_operand);
     fputs(") : ", output);
     fputs("( ", output);
-    node_print_expression(output, ternary_operation->data.ternary_operation.third_operand);
+    node_print_handler(output, ternary_operation->data.ternary_operation.third_operand);
     fputs(") ", output);
 }
 
@@ -484,8 +490,14 @@ void node_print_type_specifier(FILE *output, struct node *identifier) {
 void node_print_pointer(FILE *output, struct node *pointer) {
     fputs("*", output);
     if(pointer->data.pointer.pointer != NULL) {
-        node_print_expression(output, pointer->data.pointer.pointer);
+        node_print_handler(output, pointer->data.pointer.pointer);
     }
+}
+
+void node_print_pointer_declarator(FILE *output, struct node *pointer_declarator) {
+    fprintf(output, "*(");
+    node_print_handler(output, pointer_declarator->data.pointer_declarator.declarator);
+    fprintf(output, ")");
 }
 
 void node_print_abstract_decl(FILE *output, struct node *abstract_declarator) {
@@ -494,16 +506,16 @@ void node_print_abstract_decl(FILE *output, struct node *abstract_declarator) {
       case PARENTHESIZED_ABSTRACT_DECL:
         assert(abstract_declarator->data.abstract_decl.abstract_direct_declarator == NULL);
         fputs("(", output);
-        node_print_expression(output, abstract_declarator->data.abstract_decl.expression);
+        node_print_handler(output, abstract_declarator->data.abstract_decl.expression);
         fputs(")", output);
         break;
       case SQUARE_BRACKETS_ABSTRACT_DECL:
         if(abstract_declarator->data.abstract_decl.abstract_direct_declarator != NULL) {
-            node_print_expression(output, abstract_declarator->data.abstract_decl.abstract_direct_declarator);
+            node_print_handler(output, abstract_declarator->data.abstract_decl.abstract_direct_declarator);
         }
         fputs("[", output);
         if(abstract_declarator->data.abstract_decl.expression != NULL) {
-            node_print_expression(output, abstract_declarator->data.abstract_decl.expression);
+            node_print_handler(output, abstract_declarator->data.abstract_decl.expression);
         }
         fputs("]", output);
     }
@@ -513,15 +525,15 @@ void node_print_for_expr(FILE *output, struct node *for_expr) {
     assert(NODE_FOR_EXPR == for_expr->kind);
     fputs("(", output);
     if(for_expr->data.for_expr.initial_clause != NULL) {
-        node_print_expression(output, for_expr->data.for_expr.initial_clause);
+        node_print_handler(output, for_expr->data.for_expr.initial_clause);
     }
     fputs("; ", output);
     if(for_expr->data.for_expr.expr1 != NULL) {
-        node_print_expression(output, for_expr->data.for_expr.expr1);
+        node_print_handler(output, for_expr->data.for_expr.expr1);
     }
     fputs("; ", output);
     if(for_expr->data.for_expr.expr2 != NULL) {
-        node_print_expression(output, for_expr->data.for_expr.expr2);
+        node_print_handler(output, for_expr->data.for_expr.expr2);
     }
     fprintf(output,") {\n");
 }
@@ -534,53 +546,53 @@ void node_print_statement(FILE *output, struct node *statement) {
     case COMPOUND_STATEMENT_TYPE:
       fputs("{\n", output);
       if(statement->data.statement.statement != NULL) {
-	node_print_expression(output, statement->data.statement.statement);
+	node_print_handler(output, statement->data.statement.statement);
       }
       fputs("\n}\n\n", output);
       break;
     case EXPRESSION_STATEMENT_TYPE:
-      node_print_expression(output, statement->data.statement.expression);      
+      node_print_handler(output, statement->data.statement.expression);
       fputs(";\n", output);
       break;
     case LABELED_STATEMENT_TYPE:
-      node_print_expression(output, statement->data.statement.expression);      
+      node_print_handler(output, statement->data.statement.expression);
       fputs(" : ", output);
-      node_print_expression(output, statement->data.statement.statement);      
+      node_print_handler(output, statement->data.statement.statement);
       break;
     case WHILE_STATEMENT_TYPE:
       fprintf(output, "while(");
-      node_print_expression(output, statement->data.statement.expression);      
+      node_print_handler(output, statement->data.statement.expression);
       fputs(")",output);
-      node_print_expression(output, statement->data.statement.statement);
+      node_print_handler(output, statement->data.statement.statement);
       break;
     case DO_STATEMENT_TYPE:
       fprintf(output, "do");
-      node_print_expression(output, statement->data.statement.statement);
-      fprintf(output, "while(");      
-      node_print_expression(output, statement->data.statement.expression);      
+      node_print_handler(output, statement->data.statement.statement);
+      fprintf(output, "while(");
+      node_print_handler(output, statement->data.statement.expression);
       fputs(")",output);
-      break;      
+      break;
     case FOR_STATEMENT_TYPE:
       fprintf(output, "for");
-      node_print_expression(output, statement->data.statement.expression);
-      node_print_expression(output, statement->data.statement.statement);      
-      break;      
+      node_print_handler(output, statement->data.statement.expression);
+      node_print_handler(output, statement->data.statement.statement);
+      break;
     case BREAK_STATEMENT_TYPE:
       fprintf(output, "break;\n");
-      break;   
+      break;
     case CONTINUE_STATEMENT_TYPE:
       fprintf(output, "continue;\n");
-      break;   
+      break;
     case RETURN_STATEMENT_TYPE:
       fprintf(output, "return ");
-      node_print_expression(output, statement->data.statement.expression);
+      node_print_handler(output, statement->data.statement.expression);
       fputs(";\n", output);
-      break;   
+      break;
     case GOTO_STATEMENT_TYPE:
       fprintf(output, "goto ");
-      node_print_expression(output, statement->data.statement.expression);
+      node_print_handler(output, statement->data.statement.expression);
       fputs(";\n", output);
-      break;  
+      break;
     case NULL_STATEMENT_TYPE:
       fprintf(output, ";\n");
       break;
@@ -595,46 +607,46 @@ void node_print_expr(FILE *output, struct node *expr) {
   assert(NODE_EXPR == expr->kind);
 
   switch (expr->data.expr.type_of_expr) {
-    case BASE_EXPR:
+    case ASSIGNMENT_EXPR:
       assert(expr->data.expr.expr1 == NULL);
-      node_print_expression(output, expr->data.expr.expr2);
+      node_print_handler(output, expr->data.expr.expr2);
       break;
     case SUBSCRIPT_EXPR:
-      node_print_expression(output, expr->data.expr.expr1);
+      node_print_handler(output, expr->data.expr.expr1);
       fputs("[", output);
       if(NULL != expr->data.expr.expr2) {
-          node_print_expression(output, expr->data.expr.expr2);
+          node_print_handler(output, expr->data.expr.expr2);
       }
       fputs("]", output);
       break;
     case EXPRESSION_LIST:
-      node_print_expression(output, expr->data.expr.expr1);
+      node_print_handler(output, expr->data.expr.expr1);
       fputs(", ", output);
-      node_print_expression(output, expr->data.expr.expr2);
+      node_print_handler(output, expr->data.expr.expr2);
       break;
     case FUNCTION_CALL:
-      node_print_expression(output, expr->data.expr.expr1);
+      node_print_handler(output, expr->data.expr.expr1);
       fputs("(", output);
       if(NULL != expr->data.expr.expr2) {
-          node_print_expression(output, expr->data.expr.expr2);
+          node_print_handler(output, expr->data.expr.expr2);
       }
       fputs(") ", output);
       break;
     case CONCAT_EXPR:
-      node_print_expression(output, expr->data.expr.expr1);
+      node_print_handler(output, expr->data.expr.expr1);
       fputs(" ", output);
-      node_print_expression(output, expr->data.expr.expr2);
+      node_print_handler(output, expr->data.expr.expr2);
       break;
     case DECL_STATEMENT:
-      node_print_expression(output, expr->data.expr.expr1);
+      node_print_handler(output, expr->data.expr.expr1);
       fputs("( ", output);
-      node_print_expression(output, expr->data.expr.expr2);
+      node_print_handler(output, expr->data.expr.expr2);
       fputs(" );\n", output);
       break;
     case COMMA_SEPARATED_STATEMENT:
-      node_print_expression(output, expr->data.expr.expr1);
+      node_print_handler(output, expr->data.expr.expr1);
       fputs(", ", output);
-      node_print_expression(output, expr->data.expr.expr2);
+      node_print_handler(output, expr->data.expr.expr2);
       break;
     default:
       fprintf(output, "Expr not found!\n");
@@ -646,19 +658,29 @@ void node_print_expr(FILE *output, struct node *expr) {
 void node_print_if_statement(FILE *output, struct node *statement) {
   assert(NODE_IF_STATEMENT == statement->kind);
   fprintf(output, "if(");
-  node_print_expression(output, statement->data.if_statement.expr);
+  node_print_handler(output, statement->data.if_statement.expr);
   fprintf(output, ") {\n");
-  node_print_expression(output, statement->data.if_statement.if_statement);
+  node_print_handler(output, statement->data.if_statement.if_statement);
   fprintf(output, "} ");
   if(statement->data.if_statement.else_statement != NULL) {
     fprintf(output, "else { \n");
-    node_print_expression(output, statement->data.if_statement.else_statement);
+    node_print_handler(output, statement->data.if_statement.else_statement);
     fprintf(output, "} ");
   }
   fprintf(output, "\n");
 }
 
-void node_print_expression(FILE *output, struct node *expression) {
+void node_print_statement_list(FILE *output, struct node *statement_list) {
+  assert(NODE_STATEMENT_LIST == statement_list->kind);
+
+  if (NULL != statement_list->data.statement_list.init) {
+    node_print_handler(output, statement_list->data.statement_list.init);
+  }
+  node_print_handler(output, statement_list->data.statement_list.statement);
+  fputs("\n", output);
+}
+
+void node_print_handler(FILE *output, struct node *expression) {
   assert(NULL != expression);
   switch (expression->kind) {
     case NODE_UNARY_OPERATION:
@@ -703,22 +725,15 @@ void node_print_expression(FILE *output, struct node *expression) {
     case NODE_IF_STATEMENT:
       node_print_if_statement(output, expression);
       break;
+    case NODE_POINTER_DECLARATOR:
+      node_print_pointer_declarator(output, expression);
+      break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);
       fprintf(output, "Can't recognize expression!\n");
       assert(0);
       break;
   }
-}
-
-void node_print_statement_list(FILE *output, struct node *statement_list) {
-  assert(NODE_STATEMENT_LIST == statement_list->kind);
-
-  if (NULL != statement_list->data.statement_list.init) {
-    node_print_expression(output, statement_list->data.statement_list.init);
-  }
-  node_print_expression(output, statement_list->data.statement_list.statement);
-  fputs("\n", output);
 }
 
 void node_print_translation_unit(FILE *output, struct node *translation_unit) {
@@ -728,6 +743,6 @@ void node_print_translation_unit(FILE *output, struct node *translation_unit) {
     node_print_translation_unit(output, translation_unit->data.translation_unit.translation_unit);
   }
   if(translation_unit->data.translation_unit.top_level_decl != NULL) {
-    node_print_expression(output, translation_unit->data.translation_unit.top_level_decl);
+    node_print_handler(output, translation_unit->data.translation_unit.top_level_decl);
   }
 }
