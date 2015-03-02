@@ -426,7 +426,9 @@ labeled_statement
 
 conditional_statement
   : IF LEFT_PAREN expr RIGHT_PAREN statement
+      { $$ = node_if_statement($3, $5, NULL); }
   | IF LEFT_PAREN expr RIGHT_PAREN statement ELSE statement
+      { $$ = node_if_statement($3, $5, $7); }  
 ;
 
 while_statement

@@ -641,8 +641,6 @@ void node_print_expr(FILE *output, struct node *expr) {
       assert(0);
       break;
   }
-
-  /* fputs(";\n", output); xxx */
 }
 
 void node_print_if_statement(FILE *output, struct node *statement) {

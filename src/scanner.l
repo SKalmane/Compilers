@@ -175,7 +175,7 @@ other_grap_char $|@|`
 \&\&          return AMPERSAND_AMPERSAND;
 &\=          return AMPERSAND_EQUAL;
 \*\=          return ASTERISK_EQUAL;
-\^-          return CARET_EQUAL;
+\^\=          return CARET_EQUAL;
 \=\=        return EQUAL_EQUAL;
 \!\=        return EXCLAMATION_EQUAL;
 \>\=        return GREATER_EQUAL;
