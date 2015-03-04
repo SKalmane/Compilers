@@ -1,4 +1,4 @@
-			Last revised 21-Jan-15
+			Last revised 23-Feb-15
 
 			    Final Project
 
@@ -8,12 +8,11 @@
 			  Due: May 12, 2015
 
 Based on all the work you have completed so far, your lexer from
-Problem Set 1, your recursive descent, YACC, Bison, or ANTLR parser
-from Problem Set 2, your symbol table management system from Problem
-Set 3, the type checker from Problem Set 4, the intermediate code
-generator from Problem Set 5, and the MIPS assembly code generator
-from Problem Set 6, enhance your compiler by adding interesting
-optimizations.
+Problem Set 1, your YACC, Bison, or ANTLR parser from Problem Set 2,
+your symbol table management system from Problem Set 3, the type
+checker from Problem Set 4, the intermediate code generator from
+Problem Set 5, and the MIPS assembly code generator from Problem Set
+6, enhance your compiler by adding interesting optimizations.
 
 Your final project will be the culmination of the semester's work on
 the compiler.  The additional work for the final project will include
@@ -49,6 +48,5 @@ fifteen minutes for their presentation.  For this event, choose
 suitable programs to be compiled (the input to your compiler) so that
 they demonstrate the capabilities of your compiler.  Also, decide in
 advance which intermediate stage outputs and debugging outputs are
-most appropriate to display in front of the class.  Either plan on
-using the video projector connected to your laptop or produce
-transparencies appropriate for the overhead projector.
+most appropriate to display in front of the class.  Plan on using the
+video projector connected to your laptop.
