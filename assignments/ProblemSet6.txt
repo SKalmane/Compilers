@@ -1,4 +1,4 @@
-			Last revised 13-Feb-15
+			Last revised 23-Feb-15
 
 			    Problem Set 6
 
@@ -8,12 +8,11 @@
 		     Due: Midnight on May 3, 2015
 
 1. (100 Points) Based on all the work you have completed so far, your
-lexer from Problem Set 1, your recursive descent, YACC, or Bison
-parser from Problem Set 2, your symbol table management system from
-Problem Set 3, the type checker from Problem Set 4, and the
-intermediate code generator from Problem Set 5, develop code to
-traverse the intermediate code linked list and generate MIPS assembly
-language acceptable to SPIM.
+lexer from Problem Set 1, your YACC or Bison parser from Problem Set
+2, your symbol table management system from Problem Set 3, the type
+checker from Problem Set 4, and the intermediate code generator from
+Problem Set 5, develop code to traverse the intermediate code linked
+list and generate MIPS assembly language acceptable to SPIM.
 
 The input to Problem Set 6 is the linked list of intermediate code
 (IR) in the three-address representation we discussed in class.  The

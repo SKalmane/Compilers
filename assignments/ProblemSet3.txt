@@ -1,4 +1,4 @@
-			Last revised 21-Jan-15
+			Last revised 23-Feb-15
 
 			    Problem Set 3
 
@@ -7,9 +7,9 @@
 
 		   Due: Midnight on March 15, 2015
 
-1. (100 Points) Using your lexer from Problem Set 1 and your recursive
-descent, YACC, or Bison parser from Problem Set 2, develop a complete
-symbol table management system.
+1. (100 Points) Using your lexer from Problem Set 1 and your YACC or
+Bison parser from Problem Set 2, develop a complete symbol table
+management system.
 
 As your compiler reads the input program being compiled, it should
 generate a symbol table in memory which represents all identifiers in
@@ -18,7 +18,7 @@ appropriate type data structure that describes the declared type of
 the identifier.  This type data structure should be of the form
 discussed in class -- it is the data structure shown in the "Type
 Checking" slides on the class web site
-(http://www.courses.fas.harvard.edu/~libe295/fall2013/slides/Type%20Checking.pdf).
+(http://sites.fas.harvard.edu/~libe295/spring2015/slides/Type%20Checking.pdf).
 All references to identifiers in the parse tree should be replaced
 with pointers into the symbol table.  As in Problem Set 2, all
 statements, expressions, and other elements from the grammar should be
@@ -69,10 +69,7 @@ of the parse tree.
 Remember the solution that you turn in should include a demonstration
 that your program works and has been tested.  Thus, the test programs
 you use as input and the output that your compiler produces should be
-included with your other files.  Also, keep in mind that your solution
-must run correctly on the Harvard "ice" machines in the Science Center
-(refer to the Grading section in the class syllabus for more
-information).
+included with your other files.
 
-As always, you should use the "submit" utility on the computers in the
-Science Center to turn in your completed work.
+As always, you should use "git" to submit completed work and tag it
+with ps3-submit.

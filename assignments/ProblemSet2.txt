@@ -1,4 +1,4 @@
-			Last revised 13-Feb-15
+			Last revised 2-Mar-15
 
 			    Problem Set 2
 
@@ -53,12 +53,11 @@ considered to be signed.
 
 The reserved word "void" may be used only as the return type of a
 function or as the only parameter of a function.  Your implementation
-may require a return type to be specified for each function.
-Alternatively, the absence of a return type for a function may be
-tantamount to a return type of "int".  A parameter list must be
-specified for each function (of course, it is possible to specify
-"void").  In other words, we are not allowing the nonprototype, or
-traditional, form for function parameters.
+must require a return type to be specified for each function (in both
+declarations and definitions).  A parameter list must be specified for
+each function (of course, it is possible to specify "void").  In other
+words, we are not allowing the nonprototype, or traditional, form for
+function parameters.
 
 In addition to the base types defined above, your parser should accept
 pointers (any depth of pointers to pointers) and arrays (any number of
@@ -95,6 +94,11 @@ you created from the input file.
 In the pretty print output, parentheses should be emitted around each
 sub-expression.  For example, the expression "a = b+c/d++*e" should be
 pretty printed as "(a=(b+((c/(d++))*e)))".
+
+In addition, in the pretty print output, parentheses should be emitted
+around each component in a declarator.  For example, the declaration
+"unsigned (*a[10+2])(char)" should be pretty printed as "(unsigned int
+(*(a[(10+2)]))(signed char))".
 
 This is a good time to start to develop a reasonable methodology to
 recover from errors in the compiler's input stream.  It is not
