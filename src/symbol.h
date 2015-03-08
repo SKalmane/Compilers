@@ -22,6 +22,7 @@ struct symbol_table {
 
 
 void symbol_initialize_table(struct symbol_table *table);
+void symbol_add_from_translation_unit(struct symbol_table *table, struct node *translation_unit);
 void symbol_add_from_statement_list(struct symbol_table *table, struct node *statement_list);
 void symbol_print_table(FILE *output, struct symbol_table *table);
 

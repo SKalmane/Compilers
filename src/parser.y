@@ -347,7 +347,7 @@ abstract_declarator
 
 parameter_decl
   : type_specifiers declarator
-      {$$ = node_expr($1, $2, CONCAT_EXPR); }
+      { $$ = node_parameter_decl($1, $2); }
   | type_specifiers
   | type_specifiers abstract_declarator
       {$$ = node_expr($1, $2, CONCAT_EXPR); }
@@ -535,12 +535,12 @@ declaration_or_statement_list
 
 decl
   : decl_specifiers initialized_decl_list SEMICOLON
-      { $$ = node_expr($1, $2, DECL_STATEMENT); }
+      { $$ = node_decl($1, $2); }
 ;
 
 function_def_specifier
   : decl_specifiers declarator
-      { $$ = node_expr($1, $2, CONCAT_EXPR); }
+      { $$ = node_function_def_specifier($1, $2); }
 ;
 
 compound_statement

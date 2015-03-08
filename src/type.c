@@ -59,6 +59,39 @@ struct type *type_basic(bool is_unsigned, int width) {
   return basic;
 }
 
+struct type *type_void() {
+  struct type *void_type;
+  void_type = malloc(sizeof(struct type));
+  assert(NULL != void_type);
+
+  void_type->kind = TYPE_VOID;
+  return void_type;
+}
+
+struct type *type_pointer(struct type *pointee) {
+  struct type *pointer_type;
+  pointer_type = malloc(sizeof(struct type));
+  assert(NULL != pointer_type);
+
+  pointer_type->kind = TYPE_POINTER;
+  pointer_type->data.pointer.pointee = pointee;
+  return pointer_type;
+}
+
+struct type *type_function(struct type *type) {
+    struct type *function_type;
+    function_type = malloc(sizeof(struct type));
+    assert(NULL != function_type);
+
+    function_type->kind = TYPE_FUNCTION;
+    function_type->data.function.return_type = type;
+    /* xxx : Need to fix the following.. */
+    function_type->data.function.table = NULL;
+    function_type->data.function.parameters = NULL;
+    function_type->data.function.function_body = NULL;
+    return function_type;
+}
+
 /****************************************
  * TYPE EXPRESSION INFO AND COMPARISONS *
  ****************************************/
@@ -139,6 +172,12 @@ void type_convert_assignment(struct node *binary_operation) {
     node_get_result(binary_operation->data.binary_operation.left_operand)->type;
 }
 
+void type_assign_in_unary_operation(struct node *unary_operation) {
+  assert(NODE_UNARY_OPERATION == unary_operation->kind);
+  type_assign_in_expression(unary_operation->data.unary_operation.the_operand);
+  /* No converting or type checking yet */
+}
+
 void type_assign_in_binary_operation(struct node *binary_operation) {
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
   type_assign_in_expression(binary_operation->data.binary_operation.left_operand);
@@ -165,6 +204,10 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
 
 void type_assign_in_expression(struct node *expression) {
   switch (expression->kind) {
+    case NODE_UNARY_OPERATION:
+      type_assign_in_unary_operation(expression);
+      break;
+
     case NODE_IDENTIFIER:
       if (NULL == expression->data.identifier.symbol->result.type) {
         expression->data.identifier.symbol->result.type = type_basic(false, TYPE_WIDTH_INT);
@@ -195,4 +238,14 @@ void type_assign_in_statement_list(struct node *statement_list) {
     type_assign_in_statement_list(statement_list->data.statement_list.init);
   }
   type_assign_in_expression_statement(statement_list->data.statement_list.statement);
+}
+
+void type_assign_in_translation_unit(struct node *translation_unit) {
+  assert(NODE_TRANSLATION_UNIT == translation_unit->kind);
+  if (NULL != translation_unit->data.translation_unit.translation_unit) {
+    type_assign_in_translation_unit(translation_unit->data.translation_unit.translation_unit);
+  }
+  if(NULL != translation_unit->data.translation_unit.top_level_decl) {
+      type_assign_in_expression(translation_unit->data.translation_unit.top_level_decl);
+  }
 }

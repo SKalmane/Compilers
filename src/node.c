@@ -292,6 +292,30 @@ struct node *node_pointer_declarator(struct node *declarator) {
     return node;
 }
 
+struct node *node_decl(struct node *decl_specifier,
+                       struct node *init_decl_list) {
+    struct node *node = node_create(NODE_DECL);
+    node->data.decl.decl_specifier = decl_specifier;
+    node->data.decl.init_decl_list = init_decl_list;
+    return node;
+}
+
+struct node *node_parameter_decl(struct node *type_specifier,
+                                 struct node *declarator) {
+    struct node *node = node_create(NODE_PARAMETER_DECL);
+    node->data.parameter_decl.type_specifier = type_specifier;
+    node->data.parameter_decl.declarator = declarator;
+    return node;
+}
+
+struct node *node_function_def_specifier(struct node *decl_specifier,
+                                 struct node *declarator) {
+    struct node *node = node_create(NODE_FUNCTION_DEF_SPECIFIER);
+    node->data.function_def_specifier.decl_specifier = decl_specifier;
+    node->data.function_def_specifier.declarator = declarator;
+    return node;
+}
+
 struct result *node_get_result(struct node *expression) {
   switch (expression->kind) {
     case NODE_NUMBER:
@@ -447,7 +471,8 @@ void node_print_identifier(FILE *output, struct node *identifier) {
   assert(NULL != identifier);
   assert(NODE_IDENTIFIER == identifier->kind);
   fputs(identifier->data.identifier.name, output);
-  /* fprintf(output, "/\* %p *\/", (void *)identifier->data.identifier.symbol); xxx */
+  /* fprintf(output, " /\* %p *\/ ", (void *)identifier->data.identifier.symbol); xxx */
+  fprintf(output, " /* %d */ ", identifier->data.identifier.symbol->result.type->kind);
 }
 
 void node_print_type_specifier(FILE *output, struct node *identifier) {
@@ -484,6 +509,9 @@ void node_print_type_specifier(FILE *output, struct node *identifier) {
     case VOID_TYPE:
       fprintf(output, "void ");
       break;
+    default:
+      assert(0);
+      break;
   }
 }
 
@@ -498,6 +526,14 @@ void node_print_pointer_declarator(FILE *output, struct node *pointer_declarator
     fprintf(output, "*(");
     node_print_handler(output, pointer_declarator->data.pointer_declarator.declarator);
     fprintf(output, ")");
+}
+
+void node_print_decl(FILE *output, struct node *decl) {
+    assert(NODE_DECL == decl->kind);
+    node_print_handler(output, decl->data.decl.decl_specifier);
+    fputs("( ", output);
+    node_print_handler(output, decl->data.decl.init_decl_list);
+    fputs(" );\n", output);
 }
 
 void node_print_abstract_decl(FILE *output, struct node *abstract_declarator) {
@@ -536,6 +572,22 @@ void node_print_for_expr(FILE *output, struct node *for_expr) {
         node_print_handler(output, for_expr->data.for_expr.expr2);
     }
     fprintf(output,") {\n");
+}
+
+void node_print_parameter_decl(FILE *output, struct node *parameter_decl) {
+    assert(NODE_PARAMETER_DECL == parameter_decl->kind);
+    node_print_handler(output, parameter_decl->data.parameter_decl.type_specifier);
+    fputs(" ", output);
+    node_print_handler(output, parameter_decl->data.parameter_decl.declarator);
+}
+
+void node_print_function_def_specifier(FILE *output, struct node *function_def_specifier) {
+    assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
+    node_print_handler(output, 
+                       function_def_specifier->data.function_def_specifier.decl_specifier);
+    fputs(" ", output);
+    node_print_handler(output, 
+                       function_def_specifier->data.function_def_specifier.declarator);
 }
 
 void node_print_statement(FILE *output, struct node *statement) {
@@ -637,12 +689,6 @@ void node_print_expr(FILE *output, struct node *expr) {
       fputs(" ", output);
       node_print_handler(output, expr->data.expr.expr2);
       break;
-    case DECL_STATEMENT:
-      node_print_handler(output, expr->data.expr.expr1);
-      fputs("( ", output);
-      node_print_handler(output, expr->data.expr.expr2);
-      fputs(" );\n", output);
-      break;
     case COMMA_SEPARATED_STATEMENT:
       node_print_handler(output, expr->data.expr.expr1);
       fputs(", ", output);
@@ -727,6 +773,15 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_POINTER_DECLARATOR:
       node_print_pointer_declarator(output, expression);
+      break;
+    case NODE_DECL:
+      node_print_decl(output, expression);
+      break;
+    case NODE_PARAMETER_DECL:
+      node_print_parameter_decl(output, expression);
+      break;
+    case NODE_FUNCTION_DEF_SPECIFIER:
+      node_print_function_def_specifier(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);

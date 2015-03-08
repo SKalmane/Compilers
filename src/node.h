@@ -29,6 +29,8 @@ struct type;
 #define NODE_TRANSLATION_UNIT                14
 #define NODE_IF_STATEMENT                    15
 #define NODE_POINTER_DECLARATOR              16
+#define NODE_PARAMETER_DECL                  17
+#define NODE_FUNCTION_DEF_SPECIFIER          18
 /* ================================================== */
 
 /* ================================================== */
@@ -132,6 +134,14 @@ struct node {
     struct {
       struct node *declarator;
     } pointer_declarator;
+    struct {
+      struct node *type_specifier;
+      struct node *declarator;
+    } parameter_decl;
+    struct {
+      struct node *decl_specifier;
+      struct node *declarator;
+    } function_def_specifier;
   } data;
 };
 
@@ -215,8 +225,7 @@ struct node {
 #define EXPRESSION_LIST                                   2
 #define FUNCTION_CALL                                     3
 #define CONCAT_EXPR                                       4
-#define DECL_STATEMENT                                    5
-#define COMMA_SEPARATED_STATEMENT                         6
+#define COMMA_SEPARATED_STATEMENT                         5
 /* ======================================================*/
 
 /* ======================================================*/
@@ -283,6 +292,12 @@ struct node *node_for_expr(struct node *initial_clause, struct node *expr1,
 
 struct node *node_abstract_decl(struct node *abstract_direct_declarator,
                                 struct node *expression, int type_of_abstract_decl);
+
+struct node *node_parameter_decl(struct node *type_specifier,
+                                 struct node *declarator);
+
+struct node *node_function_def_specifier(struct node *decl_specifier,
+                                             struct node *declarator);
 
 struct node *node_if_statement(struct node *expr, struct node *if_statement, struct node *else_statement);
 

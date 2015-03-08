@@ -25,10 +25,22 @@ struct type {
       bool is_unsigned;
       int width;
     } basic;
+    struct {
+      struct type *pointee;
+    } pointer;
+    struct {
+        struct type *return_type;
+        struct type *parameters;
+        struct symbol_table *table;
+        struct node *function_body;
+    } function;
   } data;
 };
 
 struct type *type_basic(bool is_unsigned, int width);
+struct type *type_void();
+struct type *type_pointer(struct type *pointee);
+struct type *type_function(struct type *function_type);
 
 int type_size(struct type *t);
 
@@ -38,6 +50,8 @@ int type_is_arithmetic(struct type *t);
 int type_is_unsigned(struct type *t);
 
 void type_assign_in_statement_list(struct node *statement_list);
+
+void type_assign_in_translation_unit(struct node *translation_unit);
 
 void type_print(FILE *output, struct type *type);
 
