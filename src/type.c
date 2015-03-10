@@ -86,8 +86,8 @@ struct type *type_function(struct type *type) {
     function_type->kind = TYPE_FUNCTION;
     function_type->data.function.return_type = type;
     /* xxx : Need to fix the following.. */
-    function_type->data.function.table = NULL;
-    function_type->data.function.parameters = NULL;
+    function_type->data.function.parameter_list = NULL;
+    function_type->data.function.function_symbol_table = NULL;
     function_type->data.function.function_body = NULL;
     return function_type;
 }

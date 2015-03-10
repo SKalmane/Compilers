@@ -316,6 +316,22 @@ struct node *node_function_def_specifier(struct node *decl_specifier,
     return node;
 }
 
+struct node *node_function_declarator(struct node *direct_declarator,
+                                      struct node *parameter_list) {
+    struct node *node = node_create(NODE_FUNCTION_DECLARATOR);
+    node->data.function_declarator.direct_declarator = direct_declarator;
+    node->data.function_declarator.parameter_list = parameter_list;
+    return node;
+}
+
+struct node *node_parameter_list(struct node *parameter_list,
+                                      struct node *parameter_decl) {
+    struct node *node = node_create(NODE_PARAMETER_LIST);
+    node->data.parameter_list.parameter_list = parameter_list;
+    node->data.parameter_list.parameter_decl = parameter_decl;
+    return node;
+}
+
 struct result *node_get_result(struct node *expression) {
   switch (expression->kind) {
     case NODE_NUMBER:
@@ -590,6 +606,22 @@ void node_print_function_def_specifier(FILE *output, struct node *function_def_s
                        function_def_specifier->data.function_def_specifier.declarator);
 }
 
+void node_print_function_declarator(FILE *output, struct node *function_declarator) {
+    node_print_handler(output, function_declarator->data.function_declarator.direct_declarator);
+    fputs("(", output);
+    assert(NULL != function_declarator->data.function_declarator.parameter_list);
+    node_print_handler(output, function_declarator->data.function_declarator.parameter_list);
+    fputs(") ", output);
+}
+
+void node_print_parameter_list(FILE *output, struct node *parameter_list) {
+    if(parameter_list->data.parameter_list.parameter_list != NULL) {
+        node_print_handler(output, parameter_list->data.parameter_list.parameter_list);
+        fputs(", ", output);
+    }
+    node_print_handler(output, parameter_list->data.parameter_list.parameter_decl);
+}
+
 void node_print_statement(FILE *output, struct node *statement) {
   assert(NULL != statement);
   assert(NODE_STATEMENT == statement->kind);
@@ -782,6 +814,12 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_FUNCTION_DEF_SPECIFIER:
       node_print_function_def_specifier(output, expression);
+      break;
+    case NODE_FUNCTION_DECLARATOR:
+      node_print_function_declarator(output, expression);
+      break;
+    case NODE_PARAMETER_LIST:
+      node_print_parameter_list(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);

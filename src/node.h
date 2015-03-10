@@ -31,6 +31,8 @@ struct type;
 #define NODE_POINTER_DECLARATOR              16
 #define NODE_PARAMETER_DECL                  17
 #define NODE_FUNCTION_DEF_SPECIFIER          18
+#define NODE_FUNCTION_DECLARATOR             19
+#define NODE_PARAMETER_LIST                  20
 /* ================================================== */
 
 /* ================================================== */
@@ -142,6 +144,14 @@ struct node {
       struct node *decl_specifier;
       struct node *declarator;
     } function_def_specifier;
+    struct {
+      struct node *direct_declarator;
+      struct node *parameter_list;
+    } function_declarator;
+    struct {
+      struct node *parameter_list;
+      struct node *parameter_decl;
+    } parameter_list;
   } data;
 };
 

@@ -29,7 +29,7 @@ struct symbol *symbol_get(struct symbol_table *table, char name[]) {
   return NULL;
 }
 
-struct symbol *symbol_put(struct symbol_table *table, char name[], 
+struct symbol *symbol_put(struct symbol_table *table, char name[],
                           struct type *type) {
   struct symbol_list *symbol_list;
 
@@ -44,6 +44,22 @@ struct symbol *symbol_put(struct symbol_table *table, char name[],
   table->variables = symbol_list;
 
   return &symbol_list->symbol;
+}
+
+void symbol_add_to_function_parameter_list(struct type *function_type, 
+                                           struct type *param_type) {
+    struct symbol_list *symbol_list = function_type->data.function.parameter_list;
+    printf("Return type isa : %d\n", function_type->data.function.return_type->data.basic.width);
+    while(symbol_list != NULL) {
+        symbol_list = symbol_list->next;
+    }
+    symbol_list = malloc(sizeof(struct symbol_list));
+    
+    assert(NULL != symbol_list);
+    
+    symbol_list->symbol.result.type = param_type;
+    symbol_list->symbol.result.ir_operand = NULL;
+    
 }
 
 void symbol_add_from_identifier(struct symbol_table *table, struct node *identifier,
@@ -136,9 +152,9 @@ void symbol_add_from_pointer_declarator(struct symbol_table *table, struct node 
     struct type *type_of_pointee) {
   struct type *pointer_declarator_type = NULL;
   assert(NODE_POINTER_DECLARATOR == pointer_declarator->kind);
-  assert(pointer_declarator->data.pointer_declarator.declarator != NULL); 
+  assert(pointer_declarator->data.pointer_declarator.declarator != NULL);
   pointer_declarator_type = get_type_from_pointer_declarator(type_of_pointee);
-  symbol_add_from_expression(table, pointer_declarator->data.pointer_declarator.declarator, pointer_declarator_type); 
+  symbol_add_from_expression(table, pointer_declarator->data.pointer_declarator.declarator, pointer_declarator_type);
 }
 
 struct type *get_type_from_type_specifier(struct node *type_specifier) {
@@ -195,10 +211,10 @@ struct type *get_type_from_type_specifier(struct node *type_specifier) {
 }
 
 void symbol_add_from_decl(struct symbol_table *table, struct node *decl) {
-    struct type *type = NULL; 
+    struct type *type = NULL;
     assert(NODE_DECL == decl->kind);
-    /* decl_specifier doesn't need to be associated with a type. Hence we 
-     * pass in NULL 
+    /* decl_specifier doesn't need to be associated with a type. Hence we
+     * pass in NULL
      */
     symbol_add_from_expression(table, decl->data.decl.decl_specifier, NULL);
 
@@ -207,10 +223,10 @@ void symbol_add_from_decl(struct symbol_table *table, struct node *decl) {
 }
 
 void symbol_add_from_parameter_decl(struct symbol_table *table, struct node *parameter_decl) {
-    struct type *type = NULL; 
+    struct type *type = NULL;
     assert(NODE_PARAMETER_DECL == parameter_decl->kind);
-    /* decl_specifier doesn't need to be associated with a type. Hence we 
-     * pass in NULL 
+    /* decl_specifier doesn't need to be associated with a type. Hence we
+     * pass in NULL
      */
     symbol_add_from_expression(table, parameter_decl->data.parameter_decl.type_specifier, NULL);
 
@@ -219,20 +235,50 @@ void symbol_add_from_parameter_decl(struct symbol_table *table, struct node *par
 }
 
 void symbol_add_from_function_def_specifier(struct symbol_table *table, struct node *function_def_specifier) {
-    struct type *type = NULL; 
+    struct type *type = NULL;
     assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
-    /* decl_specifier doesn't need to be associated with a type. Hence we 
-     * pass in NULL 
+    /* decl_specifier doesn't need to be associated with a type. Hence we
+     * pass in NULL
      */
     symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.decl_specifier, NULL);
 
     type = get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
-    symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.declarator, 
+    symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.declarator,
                                type_function(type));
+}
+
+void symbol_add_from_parameter_list(struct symbol_table *table, 
+                                    struct node *parameter_list,
+                                    struct type *function_type) {
+    struct type *parameter_type = NULL;
+    assert(NODE_PARAMETER_LIST == parameter_list->kind);
+    printf("Return type is: %d\n", function_type->data.function.return_type->data.basic.width);
+    if(parameter_list->data.parameter_list.parameter_list != NULL) {
+        symbol_add_from_parameter_list(table, parameter_list->data.parameter_list.parameter_list,
+                                       function_type);
+    }
+    symbol_add_from_expression(table, parameter_list->data.parameter_list.parameter_decl, parameter_type);
+    symbol_add_to_function_parameter_list(function_type, parameter_type);
+}
+
+
+void symbol_add_from_function_declarator(struct symbol_table *table, struct node *function_declarator,
+                                         struct type *return_type) {
+    struct type *function_type = type_function(return_type);
+    assert(NODE_FUNCTION_DECLARATOR == function_declarator->kind);
+    function_type->data.function.function_symbol_table =  malloc(sizeof(struct symbol_table));
+    symbol_initialize_table(function_type->data.function.function_symbol_table);
+    /* Append the parameter_list into the function-type symbol as well */
+    symbol_add_from_parameter_list(function_type->data.function.function_symbol_table, 
+                                   function_declarator->data.function_declarator.parameter_list,
+                                   function_type);
+    symbol_add_from_expression(table, function_declarator->data.function_declarator.direct_declarator, 
+                               function_type);
 }
 
 void symbol_add_from_expression(struct symbol_table *table, struct node *expression,
                                 struct type *type) {
+  printf("Node kind : %d\n", expression->kind);
   switch (expression->kind) {
     case NODE_UNARY_OPERATION:
       symbol_add_from_unary_operation(table, expression);
@@ -285,6 +331,9 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
     case NODE_FUNCTION_DEF_SPECIFIER:
       symbol_add_from_function_def_specifier(table, expression);
       break;
+    case NODE_FUNCTION_DECLARATOR:
+      symbol_add_from_function_declarator(table, expression, type);
+      break;
     default:
       assert(0);
       break;
@@ -308,22 +357,24 @@ void symbol_add_from_translation_unit(struct symbol_table *table, struct node *t
 void symbol_print_type(FILE *output, struct type *type) {
     switch(type->kind) {
       case TYPE_BASIC:
-        fprintf(output, "      type: Basic Type \n"); 
+        fprintf(output, "      type: Basic Type \n");
+        fprintf(output, "Type width: %d\n", type->data.basic.width);
         break;
       case TYPE_VOID:
-        fprintf(output, "      type: Void Type \n"); 
+        fprintf(output, "      type: Void Type \n");
         break;
       case TYPE_POINTER:
-        fprintf(output, "      type: Pointer Type \n"); 
+        fprintf(output, "      type: Pointer Type \n");
         fprintf(output, "  *** Begin Pointee *** \n");
         symbol_print_type(output, type->data.pointer.pointee);
         fprintf(output, "  *** End Pointee *** \n");
         break;
       case TYPE_FUNCTION:
-        fprintf(output, "       type: Function Type \n"); 
-        fprintf(output, "*** Begin Return type: *** \n"); 
+        fprintf(output, "       type: Function Type \n");
+        fprintf(output, "*** Begin Return type: *** \n");
         symbol_print_type(output, type->data.function.return_type);
-        fprintf(output, "*** End Return type: *** \n"); 
+        fprintf(output, "*** End Return type: *** \n");
+        break;
       default:
         fprintf(output, "Type not defined yet! \n");
         assert(0);
@@ -338,7 +389,7 @@ void symbol_print_table(FILE *output, struct symbol_table *table) {
 
   for (iter = table->variables; NULL != iter; iter = iter->next) {
       fprintf(output, "  variable: %s$%p\n", iter->symbol.name, (void *)&iter->symbol);
-    symbol_print_type(output, iter->symbol.result.type); 
+    symbol_print_type(output, iter->symbol.result.type);
   }
   fputs("\n", output);
 }

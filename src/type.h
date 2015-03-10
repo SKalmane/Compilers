@@ -30,8 +30,8 @@ struct type {
     } pointer;
     struct {
         struct type *return_type;
-        struct type *parameters;
-        struct symbol_table *table;
+        struct symbol_list *parameter_list;
+        struct symbol_table *function_symbol_table;
         struct node *function_body;
     } function;
   } data;
@@ -40,7 +40,7 @@ struct type {
 struct type *type_basic(bool is_unsigned, int width);
 struct type *type_void();
 struct type *type_pointer(struct type *pointee);
-struct type *type_function(struct type *function_type);
+struct type *type_function(struct type *return_type);
 
 int type_size(struct type *t);
 

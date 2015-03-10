@@ -362,13 +362,14 @@ pointer
 
 parameter_list
   : parameter_decl
+      { $$ = node_parameter_list(NULL, $1); }
   | parameter_list COMMA parameter_decl
-      { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
+      { $$ = node_parameter_list($1, $3); }
 ;
 
 function_declarator
   : direct_declarator LEFT_PAREN parameter_list RIGHT_PAREN
-      { $$ = node_expr($1, $3, FUNCTION_CALL); }
+      { $$ = node_function_declarator($1, $3); }
 ;
 
 /* declarator */
