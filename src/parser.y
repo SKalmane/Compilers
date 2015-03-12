@@ -389,9 +389,9 @@ simple_declarator
 
 array_declarator
   : direct_declarator LEFT_SQUARE RIGHT_SQUARE
-      { $$ = node_abstract_decl($1, NULL, SQUARE_BRACKETS_ABSTRACT_DECL); } /* xxx Need to rename */
+      { $$ = node_array_declarator($1, NULL); }
   | direct_declarator LEFT_SQUARE constant_expr RIGHT_SQUARE
-      { $$ = node_abstract_decl($1, $3, SQUARE_BRACKETS_ABSTRACT_DECL); }
+      { $$ = node_array_declarator($1, $3); }
 ;
 
 direct_declarator
@@ -428,7 +428,7 @@ expression_statement
 
 labeled_statement
   : IDENTIFIER COLON statement
-      { $$ = node_statement($3, $1, LABELED_STATEMENT_TYPE); }
+      { $$ = node_labeled_statement($1, $3); }
 ;
 
 conditional_statement

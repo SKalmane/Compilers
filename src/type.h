@@ -29,18 +29,28 @@ struct type {
       struct type *pointee;
     } pointer;
     struct {
+        struct type *array_type;
+        unsigned long array_size;
+    } array;
+    struct {
         struct type *return_type;
         struct symbol_list *parameter_list;
+        int number_of_parameters;
         struct symbol_table *function_symbol_table;
         struct node *function_body;
+        struct symbol_table *parent_symbol_table;
+        struct symbol_list *statement_labels;
     } function;
   } data;
 };
 
 struct type *type_basic(bool is_unsigned, int width);
 struct type *type_void();
+struct type *type_label();
 struct type *type_pointer(struct type *pointee);
-struct type *type_function(struct type *return_type);
+struct type *type_function(struct type *return_type, 
+                           struct symbol_table *parent_table);
+struct type *type_array(struct type *array_type, unsigned long array_size);
 
 int type_size(struct type *t);
 

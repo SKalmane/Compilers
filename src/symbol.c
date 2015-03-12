@@ -9,8 +9,10 @@
 
 int symbol_table_num_errors;
 
-void symbol_initialize_table(struct symbol_table *table) {
+void symbol_initialize_table(struct symbol_table *table, 
+    int type_of_symbol_table) {
   table->variables = NULL;
+  table->type_of_symbol_table = type_of_symbol_table;
 }
 
 /**********************************************
@@ -49,7 +51,6 @@ struct symbol *symbol_put(struct symbol_table *table, char name[],
 void symbol_add_to_function_parameter_list(struct type *function_type, 
                                            struct type *param_type) {
     struct symbol_list *symbol_list = function_type->data.function.parameter_list;
-    printf("Return type isa : %d\n", function_type->data.function.return_type->data.basic.width);
     while(symbol_list != NULL) {
         symbol_list = symbol_list->next;
     }
@@ -60,6 +61,7 @@ void symbol_add_to_function_parameter_list(struct type *function_type,
     symbol_list->symbol.result.type = param_type;
     symbol_list->symbol.result.ir_operand = NULL;
     
+    function_type->data.function.number_of_parameters++;
 }
 
 void symbol_add_from_identifier(struct symbol_table *table, struct node *identifier,
@@ -244,7 +246,7 @@ void symbol_add_from_function_def_specifier(struct symbol_table *table, struct n
 
     type = get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
     symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.declarator,
-                               type_function(type));
+                               type_function(type, table));
 }
 
 void symbol_add_from_parameter_list(struct symbol_table *table, 
@@ -264,10 +266,10 @@ void symbol_add_from_parameter_list(struct symbol_table *table,
 
 void symbol_add_from_function_declarator(struct symbol_table *table, struct node *function_declarator,
                                          struct type *return_type) {
-    struct type *function_type = type_function(return_type);
+    struct type *function_type = type_function(return_type, table);
     assert(NODE_FUNCTION_DECLARATOR == function_declarator->kind);
     function_type->data.function.function_symbol_table =  malloc(sizeof(struct symbol_table));
-    symbol_initialize_table(function_type->data.function.function_symbol_table);
+    symbol_initialize_table(function_type->data.function.function_symbol_table, FUNCTION_SCOPE_SYMBOL_TABLE);
     /* Append the parameter_list into the function-type symbol as well */
     symbol_add_from_parameter_list(function_type->data.function.function_symbol_table, 
                                    function_declarator->data.function_declarator.parameter_list,
@@ -276,9 +278,146 @@ void symbol_add_from_function_declarator(struct symbol_table *table, struct node
                                function_type);
 }
 
+unsigned long symbol_get_array_size_from_constant_expr(struct node *constant_expr) {
+    if(constant_expr->kind == NODE_BINARY_OPERATION) {
+        if(constant_expr->data.binary_operation.left_operand->kind != NODE_NUMBER || 
+           constant_expr->data.binary_operation.right_operand->kind != NODE_NUMBER) {
+            /* xxx: Error! We can't evaluate this expression.. */
+            symbol_table_num_errors++;
+            printf("Input to array size cannot be evaluated at compile-time!\n");
+            return 0;
+        } else {
+            /* Evaluate the expression */
+            unsigned long left_operand = constant_expr->data.binary_operation.left_operand->data.number.value;
+            unsigned long right_operand = constant_expr->data.binary_operation.right_operand->data.number.value;
+            unsigned long result = 10000; /* Garbage value to realize that our value is unset */
+            switch (constant_expr->data.binary_operation.operation) {
+              case(BINOP_MULTIPLICATION):
+                result = (left_operand * right_operand);
+                break;
+              case(BINOP_DIVISION):
+                result = (left_operand / right_operand);
+                break;
+              case(BINOP_ADDITION):
+                result = (left_operand + right_operand);
+                break;
+              case(BINOP_SUBTRACTION):
+                result = (left_operand - right_operand);
+                break;
+              case(BINOP_REMAINDER):
+                result = (left_operand % right_operand);
+                break;
+              case(BINOP_ASSIGN):
+                /* Array input cannot be assignment*/
+              case(BINOP_ASSIGN_PLUS_EQUAL):
+              case(BINOP_ASSIGN_MINUS_EQUAL):
+              case(BINOP_ASSIGN_ASTERISK_EQUAL):
+              case(BINOP_ASSIGN_SLASH_EQUAL):
+              case(BINOP_ASSIGN_PERCENT_EQUAL):
+              case(BINOP_ASSIGN_LESS_LESS_EQUAL):
+              case(BINOP_ASSIGN_GREATER_GREATER_EQUAL):
+              case(BINOP_ASSIGN_AMPERSAND_EQUAL):
+              case(BINOP_ASSIGN_CARET_EQUAL):
+              case(BINOP_ASSIGN_VBAR_EQUAL):
+                symbol_table_num_errors++;
+                printf("Incorrect input to array size!\n");
+                result = 0;
+                break;
+                /* Different kinds of logical/bitwise expressions
+                 */
+              case(BINOP_LOGICAL_OR_EXPR):
+                result = left_operand || right_operand;
+                break;
+              case(BINOP_LOGICAL_AND_EXPR):
+                result = left_operand && right_operand;
+                break;
+              case(BINOP_BITWISE_OR_EXPR):
+                result = left_operand | right_operand;
+                break;
+              case(BINOP_BITWISE_XOR_EXPR):
+                result = left_operand ^ right_operand;
+                break;
+              case(BINOP_BITWISE_AND_EXPR):
+                result = left_operand & right_operand;
+                break;
+
+                /* Different kinds of equality operators
+                 */
+              case(BINOP_IS_EQUAL_TO):
+                result = (left_operand == right_operand);
+                break;
+              case(BINOP_NOT_EQUAL_TO):
+                result = (left_operand != right_operand);
+                break;
+
+                /* Different relational, shift, additive
+                 * and multiplicative operators
+                 */
+              case(BINOP_LESS_THAN):
+                result = (left_operand < right_operand);
+                break;
+              case(BINOP_LESS_THAN_OR_EQUAL_TO):
+                result = (left_operand <= right_operand);
+                break;
+              case(BINOP_GREATER_THAN):
+                result = (left_operand > right_operand);
+                break;
+              case(BINOP_GREATER_THAN_OR_EQUAL_TO):
+                result = (left_operand >= right_operand);
+                break;
+              case(BINOP_SHIFT_LEFT):
+                result = (left_operand << right_operand);
+                break;
+              case(BINOP_SHIFT_RIGHT):
+                result = (left_operand >> right_operand);
+                break;
+
+                /* Sequential Evaluation */
+              case(BINOP_SEQUENTIAL_EVALUATION):
+                symbol_table_num_errors++;
+                printf("Invalid input to array size!\n");
+                result = 0;
+            }
+            return result;   
+        }
+    } else if (constant_expr->kind == NODE_UNARY_OPERATION) {
+        /* xxx*/
+        return 0;
+    } else if (constant_expr->kind == NODE_TERNARY_OPERATION) {
+        /* xxx */
+        return 0;
+    } else if(constant_expr->kind == NODE_NUMBER) {
+        return constant_expr->data.number.value;
+    } else {
+        symbol_table_num_errors++;
+        printf("Unable to decipher constant expression..\n");
+        return 0;
+    }
+}
+
+void symbol_add_from_array_declarator(struct symbol_table *table, struct node *array_declarator,
+                                         struct type *array_type) {
+    unsigned long array_size = 0;
+    assert(NODE_ARRAY_DECLARATOR == array_declarator->kind);
+    if(NULL != array_declarator->data.array_declarator.constant_expr) {
+        array_size = symbol_get_array_size_from_constant_expr(array_declarator->data.array_declarator.constant_expr);
+    }
+    array_type = type_array(array_type, array_size);
+
+    symbol_add_from_expression(table, array_declarator->data.array_declarator.direct_declarator, 
+                               array_type);
+}
+
+void symbol_add_from_labeled_statement(struct symbol_table *table, struct node *labeled_statement) {
+    struct type *label_type = type_label();
+    assert(NODE_LABELED_STATEMENT == labeled_statement->kind);
+
+    symbol_add_from_expression(table, labeled_statement->data.labeled_statement.identifier, 
+                               label_type);
+}
+
 void symbol_add_from_expression(struct symbol_table *table, struct node *expression,
                                 struct type *type) {
-  printf("Node kind : %d\n", expression->kind);
   switch (expression->kind) {
     case NODE_UNARY_OPERATION:
       symbol_add_from_unary_operation(table, expression);
@@ -334,6 +473,20 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
     case NODE_FUNCTION_DECLARATOR:
       symbol_add_from_function_declarator(table, expression, type);
       break;
+    case NODE_PARAMETER_LIST:
+      assert(0); /* Should never reach here */
+      break;
+    case NODE_ARRAY_DECLARATOR:
+      symbol_add_from_array_declarator(table, expression, type);
+      break;
+    case NODE_LABELED_STATEMENT:
+      /* A label can only exist at function scope */
+      if(table->type_of_symbol_table == FILE_SCOPE_SYMBOL_TABLE) {
+          symbol_table_num_errors++;
+          printf("Statement labels can only exist within function scopes\n");
+      }
+      symbol_add_from_labeled_statement(table, expression);
+      break;
     default:
       assert(0);
       break;
@@ -369,11 +522,19 @@ void symbol_print_type(FILE *output, struct type *type) {
         symbol_print_type(output, type->data.pointer.pointee);
         fprintf(output, "  *** End Pointee *** \n");
         break;
+      case TYPE_ARRAY:
+        fprintf(output, "      type: Array Type \n");
+        fprintf(output, "*** Type of the array: *** \n");
+        symbol_print_type(output, type->data.array.array_type);
+        fprintf(output, "  *** End Type of Array *** \n");
+        fprintf(output, "Array Size: %lu\n", type->data.array.array_size);
+        break;
       case TYPE_FUNCTION:
         fprintf(output, "       type: Function Type \n");
         fprintf(output, "*** Begin Return type: *** \n");
         symbol_print_type(output, type->data.function.return_type);
         fprintf(output, "*** End Return type: *** \n");
+        fprintf(output, " Number of parameters: %d\n", type->data.function.number_of_parameters);
         break;
       default:
         fprintf(output, "Type not defined yet! \n");

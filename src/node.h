@@ -33,6 +33,8 @@ struct type;
 #define NODE_FUNCTION_DEF_SPECIFIER          18
 #define NODE_FUNCTION_DECLARATOR             19
 #define NODE_PARAMETER_LIST                  20
+#define NODE_ARRAY_DECLARATOR                21
+#define NODE_LABELED_STATEMENT               22
 /* ================================================== */
 
 /* ================================================== */
@@ -152,6 +154,14 @@ struct node {
       struct node *parameter_list;
       struct node *parameter_decl;
     } parameter_list;
+    struct {
+      struct node *direct_declarator;
+      struct node *constant_expr;
+    } array_declarator;
+    struct {
+      struct node *identifier;
+      struct node *statement;
+    } labeled_statement;
   } data;
 };
 
@@ -305,6 +315,12 @@ struct node *node_abstract_decl(struct node *abstract_direct_declarator,
 
 struct node *node_parameter_decl(struct node *type_specifier,
                                  struct node *declarator);
+
+struct node *node_array_declarator(struct node *direct_declarator,
+                                   struct node *constant_expr);
+
+struct node *node_labeled_statement(struct node *identifier,
+                                   struct node *statement);
 
 struct node *node_function_def_specifier(struct node *decl_specifier,
                                              struct node *declarator);

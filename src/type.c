@@ -68,6 +68,15 @@ struct type *type_void() {
   return void_type;
 }
 
+struct type *type_label() {
+  struct type *label_type;
+  label_type = malloc(sizeof(struct type));
+  assert(NULL != label_type);
+
+  label_type->kind = TYPE_LABEL;
+  return label_type;
+}
+
 struct type *type_pointer(struct type *pointee) {
   struct type *pointer_type;
   pointer_type = malloc(sizeof(struct type));
@@ -78,7 +87,8 @@ struct type *type_pointer(struct type *pointee) {
   return pointer_type;
 }
 
-struct type *type_function(struct type *type) {
+struct type *type_function(struct type *type, 
+                           struct symbol_table *parent_table) {
     struct type *function_type;
     function_type = malloc(sizeof(struct type));
     assert(NULL != function_type);
@@ -89,7 +99,23 @@ struct type *type_function(struct type *type) {
     function_type->data.function.parameter_list = NULL;
     function_type->data.function.function_symbol_table = NULL;
     function_type->data.function.function_body = NULL;
+    function_type->data.function.number_of_parameters = 0;
+    function_type->data.function.parent_symbol_table = parent_table;
+    function_type->data.function.statement_labels = NULL;
     return function_type;
+}
+
+
+struct type *type_array(struct type *type, 
+                        unsigned long array_size) {
+    struct type *array_type;
+    array_type = malloc(sizeof(struct type));
+    assert(NULL != array_type);
+
+    array_type->kind = TYPE_ARRAY;
+    array_type->data.array.array_type = type;
+    array_type->data.array.array_size = array_size;
+    return array_type;
 }
 
 /****************************************

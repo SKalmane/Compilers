@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  symbol_initialize_table(&symbol_table);
+  symbol_initialize_table(&symbol_table, FILE_SCOPE_SYMBOL_TABLE);
   /* symbol_add_from_statement_list(&symbol_table, root_node); */
   symbol_add_from_translation_unit(&symbol_table, root_node);
   if (symbol_table_num_errors > 0) {

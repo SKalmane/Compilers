@@ -332,6 +332,22 @@ struct node *node_parameter_list(struct node *parameter_list,
     return node;
 }
 
+struct node *node_array_declarator(struct node *direct_declarator,
+                                   struct node *constant_expr) {
+    struct node *node = node_create(NODE_ARRAY_DECLARATOR);
+    node->data.array_declarator.direct_declarator = direct_declarator;
+    node->data.array_declarator.constant_expr = constant_expr;
+    return node;
+}
+
+struct node *node_labeled_statement(struct node *identifier,
+                                    struct node *statement) {
+    struct node *node = node_create(NODE_LABELED_STATEMENT);
+    node->data.labeled_statement.identifier = identifier;
+    node->data.labeled_statement.statement = statement;
+    return node;
+}
+
 struct result *node_get_result(struct node *expression) {
   switch (expression->kind) {
     case NODE_NUMBER:
@@ -614,12 +630,27 @@ void node_print_function_declarator(FILE *output, struct node *function_declarat
     fputs(") ", output);
 }
 
+void node_print_array_declarator(FILE *output, struct node *array_declarator) {
+    node_print_handler(output, array_declarator->data.array_declarator.direct_declarator);
+    fputs("[", output);
+    if(NULL != array_declarator->data.array_declarator.constant_expr) {
+        node_print_handler(output, array_declarator->data.array_declarator.constant_expr);
+    }
+    fputs("]", output);
+}
+
 void node_print_parameter_list(FILE *output, struct node *parameter_list) {
     if(parameter_list->data.parameter_list.parameter_list != NULL) {
         node_print_handler(output, parameter_list->data.parameter_list.parameter_list);
         fputs(", ", output);
     }
     node_print_handler(output, parameter_list->data.parameter_list.parameter_decl);
+}
+
+void node_print_labeled_statement(FILE *output, struct node *labeled_statement) {
+    node_print_handler(output, labeled_statement->data.labeled_statement.identifier);
+    fputs(" : ", output);
+    node_print_handler(output, labeled_statement->data.labeled_statement.statement);
 }
 
 void node_print_statement(FILE *output, struct node *statement) {
@@ -639,9 +670,7 @@ void node_print_statement(FILE *output, struct node *statement) {
       fputs(";\n", output);
       break;
     case LABELED_STATEMENT_TYPE:
-      node_print_handler(output, statement->data.statement.expression);
-      fputs(" : ", output);
-      node_print_handler(output, statement->data.statement.statement);
+      assert(0); /* Shouldn't reach here */
       break;
     case WHILE_STATEMENT_TYPE:
       fprintf(output, "while(");
@@ -820,6 +849,12 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_PARAMETER_LIST:
       node_print_parameter_list(output, expression);
+      break;
+    case NODE_ARRAY_DECLARATOR:
+      node_print_array_declarator(output, expression);
+      break;
+    case NODE_LABELED_STATEMENT:
+      node_print_labeled_statement(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);
