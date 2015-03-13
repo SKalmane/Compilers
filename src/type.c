@@ -102,7 +102,7 @@ struct type *type_function(struct type *type) {
 }
 
 
-struct type *type_array(struct type *type, 
+struct type *type_array(struct type *type,
                         unsigned long array_size) {
     struct type *array_type;
     array_type = malloc(sizeof(struct type));

@@ -56,7 +56,7 @@ struct node *node_identifier(char *text, int length)
   struct node *node = node_create(NODE_IDENTIFIER);
   memset(node->data.identifier.name, 0, MAX_IDENTIFIER_LENGTH + 1);
   strncpy(node->data.identifier.name, text, length);
-      
+
   node->data.identifier.symbol = NULL;
   return node;
 }
@@ -630,10 +630,10 @@ void node_print_parameter_decl(FILE *output, struct node *parameter_decl) {
 
 void node_print_function_def_specifier(FILE *output, struct node *function_def_specifier) {
     assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
-    node_print_handler(output, 
+    node_print_handler(output,
                        function_def_specifier->data.function_def_specifier.decl_specifier);
     fputs(" ", output);
-    node_print_handler(output, 
+    node_print_handler(output,
                        function_def_specifier->data.function_def_specifier.declarator);
 }
 

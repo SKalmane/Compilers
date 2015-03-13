@@ -9,7 +9,7 @@
 
 int symbol_table_num_errors;
 
-void symbol_initialize_table(struct symbol_table *table, 
+void symbol_initialize_table(struct symbol_table *table,
     int type_of_symbol_table) {
   table->variables = NULL;
   table->type_of_symbol_table = type_of_symbol_table;
@@ -81,19 +81,19 @@ struct symbol *symbol_put_labels(struct symbol_table *table, char name[],
   return &symbol_list->symbol;
 }
 
-void symbol_add_to_function_parameter_list(struct type *function_type, 
+void symbol_add_to_function_parameter_list(struct type *function_type,
                                            struct type *param_type) {
     struct symbol_list *symbol_list = function_type->data.function.parameter_list;
     while(symbol_list != NULL) {
         symbol_list = symbol_list->next;
     }
     symbol_list = malloc(sizeof(struct symbol_list));
-    
+
     assert(NULL != symbol_list);
-    
+
     symbol_list->symbol.result.type = param_type;
     symbol_list->symbol.result.ir_operand = NULL;
-    
+
     function_type->data.function.number_of_parameters++;
 }
 
@@ -292,7 +292,7 @@ void symbol_add_from_parameter_decl(struct symbol_table *table, struct node *par
 void symbol_add_from_function_def_specifier(struct symbol_table *table, struct node *function_def_specifier, struct type *function_type) {
     assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
 
-    function_type->data.function.return_type = 
+    function_type->data.function.return_type =
         get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
 
     /* The following won't do anything since we don't need to add type_specifiers to our symbol table */
@@ -306,7 +306,7 @@ void symbol_add_from_function_def_specifier(struct symbol_table *table, struct n
     }
 }
 
-void symbol_add_from_parameter_list(struct symbol_table *table, 
+void symbol_add_from_parameter_list(struct symbol_table *table,
                                     struct node *parameter_list,
                                     struct type *function_type) {
     struct type *parameter_type = NULL;
@@ -319,11 +319,11 @@ void symbol_add_from_parameter_list(struct symbol_table *table,
 
     if(function_type->data.function.function_symbol_table != NULL) {
         /* This is a function definition. Add the parameters to the symbol table too */
-        symbol_add_from_expression(function_type->data.function.function_symbol_table, 
+        symbol_add_from_expression(function_type->data.function.function_symbol_table,
                                    parameter_list->data.parameter_list.parameter_decl, parameter_type);
     } else {
         /* This is just a declaration. No need to add the parameters to the symbol table. xxx */
-        symbol_add_from_expression(function_type->data.function.function_symbol_table, 
+        symbol_add_from_expression(function_type->data.function.function_symbol_table,
                                    parameter_list->data.parameter_list.parameter_decl, parameter_type);
     }
 
@@ -338,16 +338,16 @@ void symbol_add_from_function_declarator(struct symbol_table *table, struct node
     function_type->data.function.function_symbol_table =  malloc(sizeof(struct symbol_table));
 
     /* Append the parameter_list into the function-type symbol as well */
-    symbol_add_from_parameter_list(table, 
+    symbol_add_from_parameter_list(table,
                                    function_declarator->data.function_declarator.parameter_list,
                                    function_type);
-    symbol_add_from_expression(table, function_declarator->data.function_declarator.direct_declarator, 
+    symbol_add_from_expression(table, function_declarator->data.function_declarator.direct_declarator,
                                function_type);
 }
 
 unsigned long symbol_get_array_size_from_constant_expr(struct node *constant_expr) {
     if(constant_expr->kind == NODE_BINARY_OPERATION) {
-        if(constant_expr->data.binary_operation.left_operand->kind != NODE_NUMBER || 
+        if(constant_expr->data.binary_operation.left_operand->kind != NODE_NUMBER ||
            constant_expr->data.binary_operation.right_operand->kind != NODE_NUMBER) {
             /* xxx: Error! We can't evaluate this expression.. */
             symbol_table_num_errors++;
@@ -445,7 +445,7 @@ unsigned long symbol_get_array_size_from_constant_expr(struct node *constant_exp
                 printf("Invalid input to array size!\n");
                 result = 0;
             }
-            return result;   
+            return result;
         }
     } else if (constant_expr->kind == NODE_UNARY_OPERATION) {
         /* xxx*/
@@ -471,7 +471,7 @@ void symbol_add_from_array_declarator(struct symbol_table *table, struct node *a
     }
     array_type = type_array(array_type, array_size);
 
-    symbol_add_from_expression(table, array_declarator->data.array_declarator.direct_declarator, 
+    symbol_add_from_expression(table, array_declarator->data.array_declarator.direct_declarator,
                                array_type);
 }
 
@@ -479,7 +479,7 @@ void symbol_add_from_labeled_statement(struct symbol_table *table, struct node *
     struct type *label_type = type_label();
     assert(NODE_LABELED_STATEMENT == labeled_statement->kind);
 
-    symbol_add_from_identifier_to_labels_list(table, labeled_statement->data.labeled_statement.identifier, 
+    symbol_add_from_identifier_to_labels_list(table, labeled_statement->data.labeled_statement.identifier,
                                               label_type);
 }
 
@@ -487,8 +487,8 @@ void symbol_add_from_compound_statement(struct symbol_table *table, struct node 
     assert(NODE_COMPOUND_STATEMENT == compound_statement->kind);
 
     /* We need to make sure we pass in the right symbol table here.. */
-    symbol_add_from_expression(table, 
-                               compound_statement->data.compound_statement.declaration_or_statement_list, 
+    symbol_add_from_expression(table,
+                               compound_statement->data.compound_statement.declaration_or_statement_list,
                                NULL);
 }
 
@@ -501,14 +501,14 @@ void symbol_add_from_function_definition(struct symbol_table *table, struct node
     function_type->data.function.function_symbol_table->parent_symbol_table = table;
 
     /* We need to make sure we pass in the right symbol table here.. */
-    symbol_add_from_expression(table, 
-                               function_definition->data.function_definition.function_def_specifier, 
+    symbol_add_from_expression(table,
+                               function_definition->data.function_definition.function_def_specifier,
                                function_type);
     /* We need to make sure we pass in the right symbol table here.. */
-    symbol_add_from_expression(function_type->data.function.function_symbol_table, 
-                               function_definition->data.function_definition.compound_statement, 
+    symbol_add_from_expression(function_type->data.function.function_symbol_table,
+                               function_definition->data.function_definition.compound_statement,
                                NULL);
-    
+
 }
 
 void symbol_add_from_expression(struct symbol_table *table, struct node *expression,
@@ -621,7 +621,7 @@ void symbol_print_type(FILE *output, struct type *type) {
         fprintf(output, "      Type: ");
         if(type->data.basic.is_unsigned) {
             fprintf(output, "unsigned ");
-        } 
+        }
         switch(type->data.basic.width) {
           case(1):
             fprintf(output, "character\n");
