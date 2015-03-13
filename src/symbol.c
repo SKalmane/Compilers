@@ -483,13 +483,22 @@ void symbol_add_from_labeled_statement(struct symbol_table *table, struct node *
                                               label_type);
 }
 
-void symbol_add_from_compound_statement(struct symbol_table *table, struct node *compound_statement) {
+void symbol_add_from_compound_statement(struct symbol_table *table, struct node *compound_statement, 
+					bool part_of_function_definition) {
     assert(NODE_COMPOUND_STATEMENT == compound_statement->kind);
 
-    /* We need to make sure we pass in the right symbol table here.. */
-    symbol_add_from_expression(table,
-                               compound_statement->data.compound_statement.declaration_or_statement_list,
-                               NULL);
+    if(part_of_function_definition) {
+      symbol_add_from_expression(table,
+				 compound_statement->data.compound_statement.declaration_or_statement_list,
+				 NULL);
+    } else {
+      struct symbol_table *block_scope_symbol_table = malloc(sizeof(struct symbol_table));
+      symbol_initialize_table(block_scope_symbol_table, BLOCK_SCOPE_SYMBOL_TABLE);
+      block_scope_symbol_table->parent_symbol_table = table;
+      symbol_add_from_expression(block_scope_symbol_table,
+				 compound_statement->data.compound_statement.declaration_or_statement_list,
+				 NULL);
+    }
 }
 
 void symbol_add_from_function_definition(struct symbol_table *table, struct node *function_definition) {
@@ -505,9 +514,8 @@ void symbol_add_from_function_definition(struct symbol_table *table, struct node
                                function_definition->data.function_definition.function_def_specifier,
                                function_type);
     /* We need to make sure we pass in the right symbol table here.. */
-    symbol_add_from_expression(function_type->data.function.function_symbol_table,
-                               function_definition->data.function_definition.compound_statement,
-                               NULL);
+    symbol_add_from_compound_statement(function_type->data.function.function_symbol_table,
+				       function_definition->data.function_definition.compound_statement, true);
 
 }
 
@@ -588,7 +596,7 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
           symbol_table_num_errors++;
           printf("ERROR: Compound Statements can only exist within function scopes\n");
       }
-      symbol_add_from_compound_statement(table, expression);
+      symbol_add_from_compound_statement(table, expression, false);
       break;
     case NODE_FUNCTION_DEFINITION:
       symbol_add_from_function_definition(table, expression);
