@@ -87,21 +87,17 @@ struct type *type_pointer(struct type *pointee) {
   return pointer_type;
 }
 
-struct type *type_function(struct type *type, 
-                           struct symbol_table *parent_table) {
+struct type *type_function(struct type *type) {
     struct type *function_type;
     function_type = malloc(sizeof(struct type));
     assert(NULL != function_type);
 
     function_type->kind = TYPE_FUNCTION;
     function_type->data.function.return_type = type;
-    /* xxx : Need to fix the following.. */
     function_type->data.function.parameter_list = NULL;
     function_type->data.function.function_symbol_table = NULL;
     function_type->data.function.function_body = NULL;
     function_type->data.function.number_of_parameters = 0;
-    function_type->data.function.parent_symbol_table = parent_table;
-    function_type->data.function.statement_labels = NULL;
     return function_type;
 }
 

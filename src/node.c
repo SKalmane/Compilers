@@ -56,6 +56,7 @@ struct node *node_identifier(char *text, int length)
   struct node *node = node_create(NODE_IDENTIFIER);
   memset(node->data.identifier.name, 0, MAX_IDENTIFIER_LENGTH + 1);
   strncpy(node->data.identifier.name, text, length);
+      
   node->data.identifier.symbol = NULL;
   return node;
 }
@@ -348,6 +349,20 @@ struct node *node_labeled_statement(struct node *identifier,
     return node;
 }
 
+struct node *node_compound_statement(struct node *declaration_or_statement_list) {
+    struct node *node = node_create(NODE_COMPOUND_STATEMENT);
+    node->data.compound_statement.declaration_or_statement_list = declaration_or_statement_list;
+    return node;
+}
+
+struct node *node_function_definition(struct node *function_def_specifier,
+                                      struct node *compound_statement) {
+    struct node *node = node_create(NODE_FUNCTION_DEFINITION);
+    node->data.function_definition.function_def_specifier = function_def_specifier;
+    node->data.function_definition.compound_statement = compound_statement;
+    return node;
+}
+
 struct result *node_get_result(struct node *expression) {
   switch (expression->kind) {
     case NODE_NUMBER:
@@ -502,9 +517,9 @@ void node_print_ternary_operation(FILE *output, struct node *ternary_operation) 
 void node_print_identifier(FILE *output, struct node *identifier) {
   assert(NULL != identifier);
   assert(NODE_IDENTIFIER == identifier->kind);
-  fputs(identifier->data.identifier.name, output);
+  fprintf(output, identifier->data.identifier.name);
   /* fprintf(output, " /\* %p *\/ ", (void *)identifier->data.identifier.symbol); xxx */
-  fprintf(output, " /* %d */ ", identifier->data.identifier.symbol->result.type->kind);
+  /* fprintf(output, " /\* %d *\/ ", identifier->data.identifier.symbol->result.type->kind); */
 }
 
 void node_print_type_specifier(FILE *output, struct node *identifier) {
@@ -651,6 +666,20 @@ void node_print_labeled_statement(FILE *output, struct node *labeled_statement) 
     node_print_handler(output, labeled_statement->data.labeled_statement.identifier);
     fputs(" : ", output);
     node_print_handler(output, labeled_statement->data.labeled_statement.statement);
+}
+
+void node_print_compound_statement(FILE *output, struct node *compound_statement) {
+    fputs("{\n", output);
+    if(compound_statement->data.compound_statement.declaration_or_statement_list != NULL) {
+	node_print_handler(output, compound_statement->data.compound_statement.declaration_or_statement_list);
+    }
+    fputs("\n}\n\n", output);
+}
+
+void node_print_function_definition(FILE *output, struct node *function_definition) {
+    node_print_handler(output, function_definition->data.function_definition.function_def_specifier);
+    fputs(" ", output);
+    node_print_handler(output, function_definition->data.function_definition.compound_statement);
 }
 
 void node_print_statement(FILE *output, struct node *statement) {
@@ -855,6 +884,12 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_LABELED_STATEMENT:
       node_print_labeled_statement(output, expression);
+      break;
+    case NODE_COMPOUND_STATEMENT:
+      node_print_compound_statement(output, expression);
+      break;
+    case NODE_FUNCTION_DEFINITION:
+      node_print_function_definition(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);

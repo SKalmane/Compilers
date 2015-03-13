@@ -546,14 +546,14 @@ function_def_specifier
 
 compound_statement
   : LEFT_CURLY RIGHT_CURLY
-      { $$ = node_statement(NULL, NULL, COMPOUND_STATEMENT_TYPE); }
+      { $$ = node_compound_statement(NULL); }
   | LEFT_CURLY declaration_or_statement_list RIGHT_CURLY
-      { $$ = node_statement($2, NULL, COMPOUND_STATEMENT_TYPE); }
+      { $$ = node_compound_statement($2); }
 ;
 
 function_definition
   : function_def_specifier compound_statement
-      { $$ = node_expr($1, $2, CONCAT_EXPR); }
+      { $$ = node_function_definition($1, $2); }
 ;
 
 top_level_decl

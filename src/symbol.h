@@ -23,6 +23,8 @@ struct symbol_list {
 struct symbol_table {
   struct symbol_list *variables;
   int type_of_symbol_table;
+  struct symbol_list *statement_labels;
+  struct symbol_table *parent_symbol_table;
 };
 
 

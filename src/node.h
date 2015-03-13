@@ -35,6 +35,8 @@ struct type;
 #define NODE_PARAMETER_LIST                  20
 #define NODE_ARRAY_DECLARATOR                21
 #define NODE_LABELED_STATEMENT               22
+#define NODE_COMPOUND_STATEMENT              23
+#define NODE_FUNCTION_DEFINITION             24
 /* ================================================== */
 
 /* ================================================== */
@@ -162,6 +164,13 @@ struct node {
       struct node *identifier;
       struct node *statement;
     } labeled_statement;
+    struct {
+      struct node *declaration_or_statement_list;
+    } compound_statement;
+    struct {
+      struct node *function_def_specifier;
+      struct node *compound_statement;
+    } function_definition;
   } data;
 };
 
@@ -321,9 +330,12 @@ struct node *node_array_declarator(struct node *direct_declarator,
 
 struct node *node_labeled_statement(struct node *identifier,
                                    struct node *statement);
+struct node *node_compound_statement(struct node *declaration_or_statement_list);
 
 struct node *node_function_def_specifier(struct node *decl_specifier,
                                              struct node *declarator);
+struct node *node_function_definition(struct node *function_def_specifier,
+                                             struct node *compound_statement);
 
 struct node *node_if_statement(struct node *expr, struct node *if_statement, struct node *else_statement);
 
