@@ -517,8 +517,8 @@ void node_print_ternary_operation(FILE *output, struct node *ternary_operation) 
 void node_print_identifier(FILE *output, struct node *identifier) {
   assert(NULL != identifier);
   assert(NODE_IDENTIFIER == identifier->kind);
-  fprintf(output, identifier->data.identifier.name);
-  /* fprintf(output, " /\* %p *\/ ", (void *)identifier->data.identifier.symbol); xxx */
+  fputs(identifier->data.identifier.name, output);
+  fprintf(output, " /* %p */ ", (void *)identifier->data.identifier.symbol);
   /* fprintf(output, " /\* %d *\/ ", identifier->data.identifier.symbol->result.type->kind); */
 }
 
