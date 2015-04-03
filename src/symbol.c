@@ -216,31 +216,39 @@ struct type *get_type_from_type_specifier(struct node *type_specifier) {
     int type_width = TYPE_WIDTH_INT;
     int type_kind = TYPE_BASIC;
     bool is_unsigned = false;
+    int conversion_rank = CONVERSION_RANK_CHAR;
+
     assert(NODE_TYPE_SPECIFIER == type_specifier->kind);
     switch(type_specifier->data.type_specifier.kind_of_type_specifier) {
       case SIGNED_SHORT_INT:
         is_unsigned = true;
         type_width = TYPE_WIDTH_SHORT;
+        conversion_rank = CONVERSION_RANK_SHORT;
         break;
       case UNSIGNED_SHORT_INT:
         type_width = TYPE_WIDTH_SHORT;
         is_unsigned = false;
+        conversion_rank = CONVERSION_RANK_SHORT;
         break;
       case SIGNED_INT:
         type_width = TYPE_WIDTH_INT;
         is_unsigned = false;
+        conversion_rank = CONVERSION_RANK_INT;
         break;
       case UNSIGNED_INT:
         type_width = TYPE_WIDTH_INT;
         is_unsigned = true;
+        conversion_rank = CONVERSION_RANK_INT;
         break;
       case SIGNED_LONG_INT:
         type_width = TYPE_WIDTH_LONG;
         is_unsigned = false;
+        conversion_rank = CONVERSION_RANK_LONG;
         break;
       case UNSIGNED_LONG_INT:
         type_width = TYPE_WIDTH_LONG;
         is_unsigned = true;
+        conversion_rank = CONVERSION_RANK_INT;
         break;
       case CHARACTER_TYPE:
       case SIGNED_CHARACTER_TYPE:
@@ -248,6 +256,7 @@ struct type *get_type_from_type_specifier(struct node *type_specifier) {
         type_width = TYPE_WIDTH_CHAR;
         /* In our implementation, only signed characters are used */
         is_unsigned = false;
+        conversion_rank = CONVERSION_RANK_CHAR;
         break;
       case VOID_TYPE:
         type_kind = TYPE_VOID;
@@ -259,7 +268,7 @@ struct type *get_type_from_type_specifier(struct node *type_specifier) {
     }
 
     if(type_kind == TYPE_BASIC) {
-        return type_basic(is_unsigned, type_width);
+        return type_basic(is_unsigned, type_width, conversion_rank);
     } else {
         return type_void();
     }

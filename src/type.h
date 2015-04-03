@@ -18,12 +18,19 @@ struct node;
 #define TYPE_WIDTH_INT      4
 #define TYPE_WIDTH_LONG     4
 #define TYPE_WIDTH_POINTER  4
+
+#define CONVERSION_RANK_LONG                   50
+#define CONVERSION_RANK_INT                    40
+#define CONVERSION_RANK_SHORT                  30
+#define CONVERSION_RANK_CHAR                   20
+
 struct type {
   int kind;
   union {
     struct {
       bool is_unsigned;
       int width;
+      int conversion_rank;
     } basic;
     struct {
       struct type *pointee;
@@ -42,7 +49,7 @@ struct type {
   } data;
 };
 
-struct type *type_basic(bool is_unsigned, int width);
+struct type *type_basic(bool is_unsigned, int width, int conversion_rank);
 struct type *type_void();
 struct type *type_label();
 struct type *type_pointer(struct type *pointee);
