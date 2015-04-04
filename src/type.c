@@ -146,6 +146,10 @@ int type_is_unsigned(struct type *t) {
   return type_is_arithmetic(t) && t->data.basic.is_unsigned;
 }
 
+int type_is_pointer(struct type *t) {
+  return TYPE_POINTER == t->kind;
+}
+
 int type_is_void(struct type *t) {
   return TYPE_VOID == t->kind;
 }
@@ -185,9 +189,10 @@ void type_convert_usual_binary(struct node *binary_operation) {
       binary_operation->data.binary_operation.result.type =
           node_get_result(binary_operation->data.binary_operation.left_operand)->type;
   } else {
+    
       /* struct type *left_operand = node_get_result(binary_operation->data.binary_operation.left_operand)->type; */
       /* struct type *right_operand = node_get_result(binary_operation->data.binary_operation.right_operand)->type; */
-      
+    /* xxx: Need to fix case where there are different types */
       type_checking_num_errors++; printf("ERROR!\n");
   }
 }
@@ -265,8 +270,8 @@ struct type * apply_usual_arithmetic_binary_conversion(struct type *left,
          */
     }
     /* Convert all the operands to the 'converted' type */
-    left = type_basic(is_unsigned, width, conversion_rank);
-    right = type_basic(is_unsigned, width, conversion_rank);
+    /* left = type_basic(is_unsigned, width, conversion_rank); */
+    /* right = type_basic(is_unsigned, width, conversion_rank) */;
     
     return type_basic(is_unsigned, width, conversion_rank);
 }
@@ -282,14 +287,35 @@ void type_convert_multiplicative(struct node *binary_operation) {
   } else {
       type_checking_num_errors++; printf("ERROR: operands of multiplicative expr are not arithmetic\n");
   }
+}
 
-  if(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
-                   node_get_result(binary_operation->data.binary_operation.right_operand)->type)) {
-      binary_operation->data.binary_operation.result.type =
-          node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+void type_convert_additive(struct node *binary_operation) {
+  struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+  struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
+  assert(NODE_BINARY_OPERATION == binary_operation->kind);
+  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      node_get_result(binary_operation)->type = 
+          apply_usual_arithmetic_binary_conversion(left_operand_type, 
+                                                   right_operand_type);
+  } else if (type_is_pointer(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      node_get_result(binary_operation)->type = left_operand_type;
+  } else if (type_is_arithmetic(left_operand_type) && type_is_pointer(right_operand_type)) {
+    switch(binary_operation->data.binary_operation.operation) {
+    case BINOP_ADDITION:
+      node_get_result(binary_operation)->type = right_operand_type;
+      break;
+    case BINOP_SUBTRACTION:
+      type_checking_num_errors++; printf("ERROR: operands of the subtraction expr are not compatible\n");
+      break;
+    default:
+      type_checking_num_errors++; printf("ERROR: operands of the additive expr are not compatible\n");
+      break;
+    }
+  } else if(type_is_pointer(left_operand_type) && type_is_pointer(right_operand_type)) {
+    /* xxx: How to set a type for the pointer in this case? */
+    type_checking_num_errors++; printf("ERROR: operands of multiplicative expr are not arithmetic\n");
   } else {
-      
-      type_checking_num_errors++; printf("ERROR!\n");
+    type_checking_num_errors++; printf("ERROR: operands of multiplicative expr are not arithmetic\n");
   }
 }
 
@@ -301,14 +327,13 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
   switch (binary_operation->data.binary_operation.operation) {
     case BINOP_MULTIPLICATION:
     case BINOP_DIVISION:
+    case BINOP_REMAINDER:
       type_convert_multiplicative(binary_operation);
       break;
     case BINOP_ADDITION:
     case BINOP_SUBTRACTION:
-    case BINOP_REMAINDER:
-      type_convert_usual_binary(binary_operation);
+      type_convert_additive(binary_operation);
       break;
-
     case BINOP_ASSIGN:
     case BINOP_ASSIGN_PLUS_EQUAL:
     case BINOP_ASSIGN_MINUS_EQUAL:
@@ -322,7 +347,28 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
     case BINOP_ASSIGN_VBAR_EQUAL:
       type_convert_assignment(binary_operation);
       break;
-
+  case BINOP_LOGICAL_OR_EXPR:
+  case BINOP_LOGICAL_AND_EXPR:
+  case BINOP_BITWISE_OR_EXPR:
+  case BINOP_BITWISE_XOR_EXPR:
+  case BINOP_BITWISE_AND_EXPR:
+    
+    /* Different kinds of equality operators
+     */
+  case BINOP_IS_EQUAL_TO:
+  case BINOP_NOT_EQUAL_TO:
+    
+    /* Different relational, shift, additive
+     * and multiplicative operators
+     */
+  case BINOP_LESS_THAN:
+  case BINOP_LESS_THAN_OR_EQUAL_TO:
+  case BINOP_GREATER_THAN:
+  case BINOP_GREATER_THAN_OR_EQUAL_TO:
+  case BINOP_SHIFT_LEFT:
+  case BINOP_SHIFT_RIGHT:
+    type_convert_usual_binary(binary_operation);
+    break;
     default:
       assert(0);
       break;
