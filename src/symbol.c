@@ -274,6 +274,23 @@ struct type *get_type_from_type_specifier(struct node *type_specifier) {
     }
 }
 
+void symbol_add_from_cast_expr(struct symbol_table *table, struct node *cast_expr) {
+    struct node *type_specifier = NULL;
+    struct type *type = NULL;
+  assert(NODE_CAST_EXPR == cast_expr->kind);
+  if(cast_expr->data.cast_expr.unary_casting_expr != NULL) {
+      assert(cast_expr->data.cast_expr.unary_casting_expr->kind == NODE_UNARY_OPERATION);
+      type_specifier = cast_expr->data.cast_expr.unary_casting_expr->data.unary_operation.the_operand;
+      type = get_type_from_type_specifier(type_specifier);
+  }
+  if(cast_expr->data.cast_expr.cast_expr != NULL) {
+      /* xxx The type of the entire remaining expr needs to be changed to be 'type'..
+       * What we have done below is therefore incorrect
+       */
+      symbol_add_from_expression(table, cast_expr->data.cast_expr.cast_expr, type);
+  }
+}
+
 void symbol_add_from_decl(struct symbol_table *table, struct node *decl) {
     struct type *type = NULL;
     assert(NODE_DECL == decl->kind);
@@ -609,6 +626,9 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       break;
     case NODE_FUNCTION_DEFINITION:
       symbol_add_from_function_definition(table, expression);
+      break;
+    case NODE_CAST_EXPR:
+      symbol_add_from_cast_expr(table, expression);
       break;
     default:
       assert(0);

@@ -218,7 +218,7 @@ type_name
 cast_expr
   : unary_expr
   | unary_casting_expr cast_expr
-      { $$ = node_expr($1, $2, CONCAT_EXPR); }
+      { $$ = node_cast_expr($1, $2); }
 ;
 
 unary_casting_expr

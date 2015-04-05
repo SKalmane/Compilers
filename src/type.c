@@ -182,27 +182,88 @@ int type_checking_num_errors;
 
 void type_assign_in_expression(struct node *expression);
 
+void add_cast_of_basic_type(struct node *expression, bool is_unsigned, 
+                            int width, int conversion_rank) {
+    struct node *type_specifier;
+    struct node *cast_expr;
+    switch(conversion_rank) {
+      case CONVERSION_RANK_LONG:
+        type_specifier = is_unsigned?
+            node_type_specifier(UNSIGNED_LONG_INT):
+        node_type_specifier(SIGNED_LONG_INT);
+        break;
+      case CONVERSION_RANK_INT:
+        type_specifier = is_unsigned?
+            node_type_specifier(UNSIGNED_INT):
+        node_type_specifier(SIGNED_INT);
+        break;
+      case CONVERSION_RANK_SHORT:
+        type_specifier = is_unsigned?
+            node_type_specifier(UNSIGNED_SHORT_INT):
+        node_type_specifier(SIGNED_SHORT_INT);
+        break;
+      case CONVERSION_RANK_CHAR:
+        type_specifier = is_unsigned?
+            node_type_specifier(UNSIGNED_CHARACTER_TYPE):
+        node_type_specifier(SIGNED_CHARACTER_TYPE);
+        break;
+      default:
+        assert(0); printf("ERROR: Unknown conversion rank found\n");
+        break;
+    }
+    cast_expr = node_cast_expr(type_specifier, expression);
+    node_get_result(cast_expr)->type = type_basic(is_unsigned, width, conversion_rank);
+    expression = cast_expr;
+}
+
+void add_cast_of_void_type(struct node *expression) {
+    struct node *type_specifier = node_type_specifier(VOID_TYPE);
+    struct node *cast_expr = node_cast_expr(type_specifier, expression);
+    node_get_result(cast_expr)->type = type_void();
+    expression = cast_expr;
+}
+
+void add_cast_expr(struct node *expression, struct type *type) {
+    switch(type->kind) {
+      case TYPE_BASIC:
+        add_cast_of_basic_type(expression, type->data.basic.is_unsigned, 
+                               type->data.basic.width, type->data.basic.conversion_rank);
+        break;
+      case TYPE_VOID:
+        add_cast_of_void_type(expression);
+        break;
+      case TYPE_POINTER:
+        break;
+      case TYPE_ARRAY:
+        break;
+      case TYPE_FUNCTION:
+        assert(0); printf("ERROR: Can't add cast of type function\n'");
+        break;
+      case TYPE_LABEL:
+        assert(0); printf("ERROR: Can't add cast of type label\n'");
+        break;
+      default:
+        assert(0); printf("ERROR: Unknown type found\n");
+        break;
+    }
+}
+
 void type_convert_usual_binary(struct node *binary_operation) {
-  assert(NODE_BINARY_OPERATION == binary_operation->kind);
-  if(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
-                   node_get_result(binary_operation->data.binary_operation.right_operand)->type)) {
-      binary_operation->data.binary_operation.result.type =
-          node_get_result(binary_operation->data.binary_operation.left_operand)->type;
-  } else {
+    assert(NODE_BINARY_OPERATION == binary_operation->kind);
     
-      /* struct type *left_operand = node_get_result(binary_operation->data.binary_operation.left_operand)->type; */
-      /* struct type *right_operand = node_get_result(binary_operation->data.binary_operation.right_operand)->type; */
-    /* xxx: Need to fix case where there are different types */
-      type_checking_num_errors++; printf("ERROR!\n");
-  }
+    assert(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
+                         node_get_result(binary_operation->data.binary_operation.right_operand)->type));
+    binary_operation->data.binary_operation.result.type =
+        node_get_result(binary_operation->data.binary_operation.left_operand)->type;
 }
 
 void type_convert_assignment(struct node *binary_operation) {
-  assert(NODE_BINARY_OPERATION == binary_operation->kind);
-  assert(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
-                       node_get_result(binary_operation->data.binary_operation.right_operand)->type));
-  binary_operation->data.binary_operation.result.type =
-    node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+    assert(NODE_BINARY_OPERATION == binary_operation->kind);
+
+    assert(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
+                         node_get_result(binary_operation->data.binary_operation.right_operand)->type));
+    binary_operation->data.binary_operation.result.type =
+        node_get_result(binary_operation->data.binary_operation.left_operand)->type;
 }
 
 void type_assign_in_unary_operation(struct node *unary_operation) {
@@ -232,7 +293,7 @@ void type_assign_in_unary_operation(struct node *unary_operation) {
   /* xxx: No converting yet */
 }
 
-struct type * apply_usual_arithmetic_binary_conversion(struct type *left, 
+struct type * apply_usual_arithmetic_binary_conversion(struct type *left,
                                                        struct type *right) {
     int conversion_rank = (left->data.basic.conversion_rank >= right->data.basic.conversion_rank)?
         left->data.basic.conversion_rank:right->data.basic.conversion_rank;
@@ -272,31 +333,57 @@ struct type * apply_usual_arithmetic_binary_conversion(struct type *left,
     /* Convert all the operands to the 'converted' type */
     /* left = type_basic(is_unsigned, width, conversion_rank); */
     /* right = type_basic(is_unsigned, width, conversion_rank) */;
-    
+
     return type_basic(is_unsigned, width, conversion_rank);
 }
 
-void type_convert_multiplicative(struct node *binary_operation) {
+/* If the operands are either a pointer or an integer, the result's type should be
+ * boolean. Since we don't have a boolean type, we will use an int type i.e.,
+ * TYPE_BASIC
+ */
+void type_convert_scalar(struct node *binary_operation) {
   struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
   struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
-  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
-      node_get_result(binary_operation)->type = 
-          apply_usual_arithmetic_binary_conversion(left_operand_type, 
-                                                   right_operand_type);
+  if (type_is_scalar(left_operand_type) && type_is_scalar(right_operand_type)) {
+      node_get_result(binary_operation)->type = type_basic(true, TYPE_WIDTH_INT, CONVERSION_RANK_INT);
   } else {
-      type_checking_num_errors++; printf("ERROR: operands of multiplicative expr are not arithmetic\n");
+      type_checking_num_errors++; printf("ERROR: operands of expression need to be arithmetic or a pointer\n");
+  }
+}
+
+/* This function adds the implicit casts to the operands and then sets the type
+ * on the type of the binary_operation node
+ */
+void type_convert_arithmetic(struct node *binary_operation) {
+  struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+  struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
+  struct type *result_type;
+  assert(NODE_BINARY_OPERATION == binary_operation->kind);
+  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      result_type =
+          apply_usual_arithmetic_binary_conversion(left_operand_type,
+                                                   right_operand_type);
+      add_cast_expr(binary_operation->data.binary_operation.left_operand, result_type);
+      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+      type_convert_usual_binary(binary_operation);
+  } else {
+      type_checking_num_errors++; printf("ERROR: operands of expression need to be arithmetic\n");
   }
 }
 
 void type_convert_additive(struct node *binary_operation) {
   struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
   struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
+  struct type *result_type;
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
   if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
-      node_get_result(binary_operation)->type = 
-          apply_usual_arithmetic_binary_conversion(left_operand_type, 
+      result_type =
+          apply_usual_arithmetic_binary_conversion(left_operand_type,
                                                    right_operand_type);
+      add_cast_expr(binary_operation->data.binary_operation.left_operand, result_type);
+      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+      type_convert_usual_binary(binary_operation);
   } else if (type_is_pointer(left_operand_type) && type_is_arithmetic(right_operand_type)) {
       node_get_result(binary_operation)->type = left_operand_type;
   } else if (type_is_arithmetic(left_operand_type) && type_is_pointer(right_operand_type)) {
@@ -313,10 +400,53 @@ void type_convert_additive(struct node *binary_operation) {
     }
   } else if(type_is_pointer(left_operand_type) && type_is_pointer(right_operand_type)) {
     /* xxx: How to set a type for the pointer in this case? */
-    type_checking_num_errors++; printf("ERROR: operands of multiplicative expr are not arithmetic\n");
+    type_checking_num_errors++; printf("ERROR: operands of expression are not compatible with the operation\n");
   } else {
-    type_checking_num_errors++; printf("ERROR: operands of multiplicative expr are not arithmetic\n");
+    type_checking_num_errors++; printf("ERROR: operands of expression are not compatible with the operation\n");
   }
+}
+
+bool types_are_compatible(struct type *left, struct type *right);
+
+bool pointer_types_are_compatible(struct type *left, struct type *right) {
+    types_are_compatible(left->data.pointee, right->data.pointee);
+}
+
+bool types_are_compatible(struct type *left, struct type *right) {
+    bool compatible = false;
+    if(type_is_pointer(left) && type_is_pointer(right)) {
+        compatible = pointer_types_are_compatible(left, right); 
+    } else if (type_is_arithmetic(left) && type_is_arithmetic(right)) {
+        compatible = true;
+    } else if (type_is_array(left) && type_is_pointer(right)) {
+
+    }
+    return compatible;
+}
+
+void type_convert_simple_assignment(struct node *binary_operation) {
+  struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+  struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
+  struct type *result_type;
+  assert(NODE_BINARY_OPERATION == binary_operation->kind);
+  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      result_type =
+          apply_usual_arithmetic_binary_conversion(left_operand_type,
+                                                   right_operand_type);
+      add_cast_expr(binary_operation->data.binary_operation.left_operand, result_type);
+      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+      type_convert_usual_assignment(binary_operation);
+  } else if(type_is_pointer(left_operand_type) type_is_pointer(right_operand_type)) {
+      if(types_are_compatible(left_operand_type, right_operand_type)) {
+          type_convert_usual_assignment(binary_operation);
+      } else {
+       type_checking_num_errors++; printf("ERROR: the pointer types in the assignment operation are not compatible\n");
+      }
+  } else {
+      type_checking_num_errors++; printf("ERROR: operands of assignment operation are not compatible\n");
+  }
+    
+    type_convert_assignment(binary_operation);
 }
 
 void type_assign_in_binary_operation(struct node *binary_operation) {
@@ -328,13 +458,15 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
     case BINOP_MULTIPLICATION:
     case BINOP_DIVISION:
     case BINOP_REMAINDER:
-      type_convert_multiplicative(binary_operation);
+      type_convert_arithmetic(binary_operation);
       break;
     case BINOP_ADDITION:
     case BINOP_SUBTRACTION:
       type_convert_additive(binary_operation);
       break;
     case BINOP_ASSIGN:
+      type_convert_simple_assignment(binary_operation);
+      break;
     case BINOP_ASSIGN_PLUS_EQUAL:
     case BINOP_ASSIGN_MINUS_EQUAL:
     case BINOP_ASSIGN_ASTERISK_EQUAL:
@@ -345,36 +477,48 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
     case BINOP_ASSIGN_AMPERSAND_EQUAL:
     case BINOP_ASSIGN_CARET_EQUAL:
     case BINOP_ASSIGN_VBAR_EQUAL:
-      type_convert_assignment(binary_operation);
+      /* xxx: Compound assignment */
       break;
-  case BINOP_LOGICAL_OR_EXPR:
-  case BINOP_LOGICAL_AND_EXPR:
-  case BINOP_BITWISE_OR_EXPR:
-  case BINOP_BITWISE_XOR_EXPR:
-  case BINOP_BITWISE_AND_EXPR:
-    
-    /* Different kinds of equality operators
-     */
-  case BINOP_IS_EQUAL_TO:
-  case BINOP_NOT_EQUAL_TO:
-    
-    /* Different relational, shift, additive
-     * and multiplicative operators
-     */
-  case BINOP_LESS_THAN:
-  case BINOP_LESS_THAN_OR_EQUAL_TO:
-  case BINOP_GREATER_THAN:
-  case BINOP_GREATER_THAN_OR_EQUAL_TO:
-  case BINOP_SHIFT_LEFT:
-  case BINOP_SHIFT_RIGHT:
-    type_convert_usual_binary(binary_operation);
-    break;
+    case BINOP_LOGICAL_OR_EXPR:
+    case BINOP_LOGICAL_AND_EXPR:
+    case BINOP_BITWISE_OR_EXPR:
+      type_convert_scalar(binary_operation);
+      break;
+    case BINOP_BITWISE_XOR_EXPR:
+    case BINOP_BITWISE_AND_EXPR:
+      type_convert_arithmetic(binary_operation);
+      break;
+
+      /* Different kinds of equality operators
+       */
+    case BINOP_IS_EQUAL_TO:
+    case BINOP_NOT_EQUAL_TO:
+
+      /* Different relational, shift, additive
+       * and multiplicative operators
+       */
+    case BINOP_LESS_THAN:
+    case BINOP_LESS_THAN_OR_EQUAL_TO:
+    case BINOP_GREATER_THAN:
+    case BINOP_GREATER_THAN_OR_EQUAL_TO:
+      type_convert_scalar(binary_operation);
+      break;
+    case BINOP_SHIFT_LEFT:
+    case BINOP_SHIFT_RIGHT:
+      type_convert_arithmetic(binary_operation);
+      break;
     default:
       assert(0);
       break;
   }
 }
 
+/* Set the type to be that of the cast */
+void type_assign_in_cast_expr(struct node *cast_expr) {
+    cast_expr->data.cast_expr.result.type =
+        get_type_from_type_specifier(
+            cast_expr->data.cast_expr.unary_casting_expr->data.unary_operation.the_operand);
+}
 
 void type_assign_in_expression(struct node *expression) {
   switch (expression->kind) {
@@ -384,13 +528,12 @@ void type_assign_in_expression(struct node *expression) {
 
     case NODE_IDENTIFIER:
       if (NULL == expression->data.identifier.symbol->result.type) {
-          expression->data.identifier.symbol->result.type = 
-              type_basic(false, TYPE_WIDTH_INT, CONVERSION_RANK_INT); /* xxx: 3rd argument Needs to change */
+          assert(0); printf("ERROR: The identifier's type should have been defined by now\n");
       }
       break;
 
     case NODE_NUMBER:
-      expression->data.number.result.type = 
+      expression->data.number.result.type =
           type_basic(false, TYPE_WIDTH_INT, CONVERSION_RANK_INT);  /* xxx: 3rd argument Needs to change */
       break;
 
@@ -398,7 +541,7 @@ void type_assign_in_expression(struct node *expression) {
       type_assign_in_binary_operation(expression);
       break;
     case NODE_STRING:
-      expression->data.number.result.type = 
+      expression->data.number.result.type =
           type_pointer(type_basic(false, TYPE_WIDTH_CHAR, CONVERSION_RANK_CHAR));
       break;
     case NODE_TERNARY_OPERATION:
@@ -443,6 +586,9 @@ void type_assign_in_expression(struct node *expression) {
     case NODE_COMPOUND_STATEMENT:
       break;
     case NODE_FUNCTION_DEFINITION:
+      break;
+    case NODE_CAST_EXPR:
+      type_assign_in_cast_expr(expression);
       break;
     default:
       assert(0);

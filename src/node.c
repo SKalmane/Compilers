@@ -317,6 +317,14 @@ struct node *node_function_def_specifier(struct node *decl_specifier,
     return node;
 }
 
+struct node *node_cast_expr(struct node *unary_casting_expr,
+                            struct node *cast_expr) {
+    struct node *node = node_create(NODE_FUNCTION_DEF_SPECIFIER);
+    node->data.cast_expr.unary_casting_expr = unary_casting_expr;
+    node->data.cast_expr.cast_expr = cast_expr;
+    return node;
+}
+
 struct node *node_function_declarator(struct node *direct_declarator,
                                       struct node *parameter_list) {
     struct node *node = node_create(NODE_FUNCTION_DECLARATOR);
@@ -791,6 +799,13 @@ void node_print_expr(FILE *output, struct node *expr) {
   }
 }
 
+void node_print_cast_expr(FILE *output, struct node *cast_expr) {
+    assert(NODE_CAST_EXPR == cast_expr->kind);
+    node_print_handler(output, cast_expr->data.cast_expr.unary_casting_expr);
+    fputs(" ", output);
+    node_print_handler(output, cast_expr->data.cast_expr.cast_expr);
+}
+
 void node_print_if_statement(FILE *output, struct node *statement) {
   assert(NODE_IF_STATEMENT == statement->kind);
   fprintf(output, "if(");
@@ -890,6 +905,9 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_FUNCTION_DEFINITION:
       node_print_function_definition(output, expression);
+      break;
+    case NODE_CAST_EXPR:
+      node_print_cast_expr(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);
