@@ -38,6 +38,7 @@ struct type;
 #define NODE_COMPOUND_STATEMENT              23
 #define NODE_FUNCTION_DEFINITION             24
 #define NODE_CAST_EXPR                       25
+#define NODE_FUNCTION_CALL                   26
 /* ================================================== */
 
 /* ================================================== */
@@ -177,6 +178,11 @@ struct node {
           struct node *cast_expr;
           struct result result;
       } cast_expr;
+      struct {
+          struct node *postfix_expr;
+          struct node *expression_list;
+          struct result result;
+      } function_call;
   } data;
 };
 
@@ -346,6 +352,8 @@ struct node *node_function_definition(struct node *function_def_specifier,
 struct node *node_if_statement(struct node *expr, struct node *if_statement, struct node *else_statement);
 
 struct node *node_cast_expr(struct node *unary_casting_expr, struct node *cast_expr);
+
+struct node *node_function_call(struct node *postfix_expr, struct node *expression_list);
 
 struct result *node_get_result(struct node *expression);
 

@@ -319,9 +319,17 @@ struct node *node_function_def_specifier(struct node *decl_specifier,
 
 struct node *node_cast_expr(struct node *unary_casting_expr,
                             struct node *cast_expr) {
-    struct node *node = node_create(NODE_FUNCTION_DEF_SPECIFIER);
+    struct node *node = node_create(NODE_CAST_EXPR);
     node->data.cast_expr.unary_casting_expr = unary_casting_expr;
     node->data.cast_expr.cast_expr = cast_expr;
+    return node;
+}
+
+struct node *node_function_call(struct node *postfix_expr,
+                                struct node *expression_list) {
+    struct node *node = node_create(NODE_FUNCTION_CALL);
+    node->data.function_call.postfix_expr = postfix_expr;
+    node->data.function_call.expression_list = expression_list;
     return node;
 }
 
@@ -379,6 +387,8 @@ struct result *node_get_result(struct node *expression) {
       return &expression->data.identifier.symbol->result;
     case NODE_BINARY_OPERATION:
       return &expression->data.binary_operation.result;
+    case NODE_CAST_EXPR:
+      return &expression->data.cast_expr.result;
     default:
       assert(0);
       return NULL;
@@ -806,6 +816,15 @@ void node_print_cast_expr(FILE *output, struct node *cast_expr) {
     node_print_handler(output, cast_expr->data.cast_expr.cast_expr);
 }
 
+void node_print_function_call(FILE *output, struct node *function_call) {
+    node_print_handler(output, function_call->data.function_call.postfix_expr);
+    fputs("(", output);
+    if(NULL != function_call->data.function_call.postfix_expr) {
+        node_print_handler(output, function_call->data.function_call.expression_list);
+    }
+    fputs(") ", output);
+}
+
 void node_print_if_statement(FILE *output, struct node *statement) {
   assert(NODE_IF_STATEMENT == statement->kind);
   fprintf(output, "if(");
@@ -908,6 +927,9 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_CAST_EXPR:
       node_print_cast_expr(output, expression);
+      break;
+    case NODE_FUNCTION_CALL:
+      node_print_function_call(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);

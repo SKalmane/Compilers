@@ -101,12 +101,15 @@ void symbol_add_from_identifier(struct symbol_table *table, struct node *identif
                                 struct type *type) {
   struct symbol *symbol;
   assert(NODE_IDENTIFIER == identifier->kind);
-
+  printf("Identifier name: %s\n", identifier->data.identifier.name);
   symbol = symbol_get(table, identifier->data.identifier.name);
   if (NULL == symbol) {
       symbol = symbol_put(table, identifier->data.identifier.name, type);
   }
   identifier->data.identifier.symbol = symbol;
+  if(identifier->data.identifier.symbol->result.type != NULL) {
+      printf("Kind of identifier type: %d\n", (identifier->data.identifier.symbol->result.type->kind));   
+  }
 }
 
 void symbol_add_from_identifier_to_labels_list(struct symbol_table *table, struct node *identifier,
@@ -172,6 +175,18 @@ void symbol_add_from_expr(struct symbol_table *table, struct node *expr) {
   if(expr->data.expr.expr2 != NULL) {
       symbol_add_from_expression(table, expr->data.expr.expr2, NULL);
   }
+}
+
+void symbol_add_from_function_call(struct symbol_table *table, struct node *function_call) {
+    /* Since this is a function call, the function should already have a declaration and a definition 
+       by this time */
+    assert(NODE_FUNCTION_CALL == function_call->kind);
+    if(function_call->data.function_call.postfix_expr != NULL) {
+        symbol_add_from_expression(table, function_call->data.function_call.postfix_expr, NULL);
+    }
+    if(function_call->data.function_call.expression_list != NULL) {
+        symbol_add_from_expression(table, function_call->data.function_call.expression_list, NULL);
+    }
 }
 
 void symbol_add_from_for_expr(struct symbol_table *table, struct node *for_expr) {
@@ -275,19 +290,9 @@ struct type *get_type_from_type_specifier(struct node *type_specifier) {
 }
 
 void symbol_add_from_cast_expr(struct symbol_table *table, struct node *cast_expr) {
-    struct node *type_specifier = NULL;
-    struct type *type = NULL;
   assert(NODE_CAST_EXPR == cast_expr->kind);
-  if(cast_expr->data.cast_expr.unary_casting_expr != NULL) {
-      assert(cast_expr->data.cast_expr.unary_casting_expr->kind == NODE_UNARY_OPERATION);
-      type_specifier = cast_expr->data.cast_expr.unary_casting_expr->data.unary_operation.the_operand;
-      type = get_type_from_type_specifier(type_specifier);
-  }
   if(cast_expr->data.cast_expr.cast_expr != NULL) {
-      /* xxx The type of the entire remaining expr needs to be changed to be 'type'..
-       * What we have done below is therefore incorrect
-       */
-      symbol_add_from_expression(table, cast_expr->data.cast_expr.cast_expr, type);
+      symbol_add_from_expression(table, cast_expr->data.cast_expr.cast_expr, NULL);
   }
 }
 
@@ -629,6 +634,9 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       break;
     case NODE_CAST_EXPR:
       symbol_add_from_cast_expr(table, expression);
+      break;
+    case NODE_FUNCTION_CALL:
+      symbol_add_from_function_call(table, expression);
       break;
     default:
       assert(0);

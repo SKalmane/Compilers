@@ -120,9 +120,7 @@ struct type *type_array(struct type *type,
 
 int type_is_equal(struct type *left, struct type *right) {
   int equal;
-
   equal = left->kind == right->kind;
-
   if (equal) {
     switch (left->kind) {
       case TYPE_BASIC:
@@ -148,6 +146,10 @@ int type_is_unsigned(struct type *t) {
 
 int type_is_pointer(struct type *t) {
   return TYPE_POINTER == t->kind;
+}
+
+int type_is_array(struct type *t) {
+  return TYPE_ARRAY == t->kind;
 }
 
 int type_is_void(struct type *t) {
@@ -182,7 +184,7 @@ int type_checking_num_errors;
 
 void type_assign_in_expression(struct node *expression);
 
-void add_cast_of_basic_type(struct node *expression, bool is_unsigned, 
+void add_cast_of_basic_type(struct node *expression, bool is_unsigned,
                             int width, int conversion_rank) {
     struct node *type_specifier;
     struct node *cast_expr;
@@ -226,7 +228,7 @@ void add_cast_of_void_type(struct node *expression) {
 void add_cast_expr(struct node *expression, struct type *type) {
     switch(type->kind) {
       case TYPE_BASIC:
-        add_cast_of_basic_type(expression, type->data.basic.is_unsigned, 
+        add_cast_of_basic_type(expression, type->data.basic.is_unsigned,
                                type->data.basic.width, type->data.basic.conversion_rank);
         break;
       case TYPE_VOID:
@@ -235,6 +237,7 @@ void add_cast_expr(struct node *expression, struct type *type) {
       case TYPE_POINTER:
         break;
       case TYPE_ARRAY:
+        /* xxx add_cast_of_pointer_type_to_array(expression, type);  */
         break;
       case TYPE_FUNCTION:
         assert(0); printf("ERROR: Can't add cast of type function\n'");
@@ -250,7 +253,7 @@ void add_cast_expr(struct node *expression, struct type *type) {
 
 void type_convert_usual_binary(struct node *binary_operation) {
     assert(NODE_BINARY_OPERATION == binary_operation->kind);
-    
+
     assert(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
                          node_get_result(binary_operation->data.binary_operation.right_operand)->type));
     binary_operation->data.binary_operation.result.type =
@@ -259,26 +262,60 @@ void type_convert_usual_binary(struct node *binary_operation) {
 
 void type_convert_assignment(struct node *binary_operation) {
     assert(NODE_BINARY_OPERATION == binary_operation->kind);
+    /* xxx: assert(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type, */
+    /*                      node_get_result(binary_operation->data.binary_operation.right_operand)->type)); */
+    if(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
+                     node_get_result(binary_operation->data.binary_operation.right_operand)->type)) {
+        binary_operation->data.binary_operation.result.type =
+            node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+    }
+}
 
-    assert(type_is_equal(node_get_result(binary_operation->data.binary_operation.left_operand)->type,
-                         node_get_result(binary_operation->data.binary_operation.right_operand)->type));
-    binary_operation->data.binary_operation.result.type =
-        node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+void apply_usual_arithmetic_unary_conversion(struct node *unary_operation) {
+    struct node *the_operand = unary_operation->data.unary_operation.the_operand;
+    struct type *operand_type = node_get_result(the_operand)->type;
+    struct type *conversion_type = type_basic(false, TYPE_WIDTH_INT, CONVERSION_RANK_INT);
+
+    assert(NODE_UNARY_OPERATION == unary_operation->kind);
+    assert(operand_type->kind == TYPE_BASIC);
+    if(operand_type->data.basic.conversion_rank < CONVERSION_RANK_INT) {
+        add_cast_expr(the_operand, conversion_type);
+    } else {
+        /* No conversion needed */
+    }
+}
+
+void apply_usual_array_unary_conversion(struct node *unary_operation) {
+    struct node *the_operand = unary_operation->data.unary_operation.the_operand;
+    struct type *operand_type = node_get_result(the_operand)->type;
+    struct type *conversion_type = type_pointer(operand_type->data.array.array_type);
+
+    assert(NODE_UNARY_OPERATION == unary_operation->kind);
+    assert(operand_type->kind == TYPE_ARRAY);
+    add_cast_expr(the_operand, conversion_type);
+    node_get_result(unary_operation)->type = type_pointer(
+        node_get_result(the_operand)->type->data.array.array_type);
+    /* After this step, we should not come across array type anywhere.. */
 }
 
 void type_assign_in_unary_operation(struct node *unary_operation) {
   struct node *the_operand = unary_operation->data.unary_operation.the_operand;
   struct type *operand_type = node_get_result(the_operand)->type;
+  type_assign_in_expression(the_operand);
   assert(NODE_UNARY_OPERATION == unary_operation->kind);
   switch(operand_type->kind) {
     case TYPE_BASIC:
+      apply_usual_arithmetic_unary_conversion(unary_operation);
+      node_get_result(unary_operation)->type =
+          node_get_result(unary_operation->data.unary_operation.the_operand)->type;
+      break;
     case TYPE_VOID:
     case TYPE_POINTER:
       node_get_result(unary_operation)->type = node_get_result(the_operand)->type;
       break;
     case TYPE_ARRAY:
-      node_get_result(unary_operation)->type = type_pointer(
-          node_get_result(the_operand)->type->data.array.array_type);
+      printf("Hi..\n");
+      apply_usual_array_unary_conversion(unary_operation);
       break;
     case TYPE_FUNCTION:
       type_checking_num_errors++; printf("ERROR: operand of unary operation cannot be function type\n");
@@ -309,9 +346,9 @@ struct type * apply_usual_arithmetic_binary_conversion(struct type *left,
       case CONVERSION_RANK_INT:
         width = TYPE_WIDTH_INT;
       case CONVERSION_RANK_SHORT:
-        width = TYPE_WIDTH_SHORT;
+        assert(0); printf("ERROR: Conversion rank should be INT or higher\n");
       case CONVERSION_RANK_CHAR:
-        width = TYPE_WIDTH_CHAR;
+        assert(0); printf("ERROR: Conversion rank should be INT or higher\n");
     }
 
     if(are_both_unsigned || are_both_signed) {
@@ -326,13 +363,7 @@ struct type * apply_usual_arithmetic_binary_conversion(struct type *left,
             is_unsigned = (left->data.basic.conversion_rank > right->data.basic.conversion_rank)?
                 left->data.basic.is_unsigned: right->data.basic.is_unsigned;
         }
-        /* xxx: One operand is unsigned and the other is signed with greater rank but cannot
-         * represent all values of the unsigned type - Need to implement this case
-         */
     }
-    /* Convert all the operands to the 'converted' type */
-    /* left = type_basic(is_unsigned, width, conversion_rank); */
-    /* right = type_basic(is_unsigned, width, conversion_rank) */;
 
     return type_basic(is_unsigned, width, conversion_rank);
 }
@@ -406,20 +437,17 @@ void type_convert_additive(struct node *binary_operation) {
   }
 }
 
-bool types_are_compatible(struct type *left, struct type *right);
-
-bool pointer_types_are_compatible(struct type *left, struct type *right) {
-    types_are_compatible(left->data.pointee, right->data.pointee);
-}
-
-bool types_are_compatible(struct type *left, struct type *right) {
+bool types_are_compatible(struct type *left, /* in */
+                          struct type *right /* in */) {
     bool compatible = false;
     if(type_is_pointer(left) && type_is_pointer(right)) {
-        compatible = pointer_types_are_compatible(left, right); 
+        compatible = types_are_compatible(left->data.pointer.pointee, right->data.pointer.pointee);
     } else if (type_is_arithmetic(left) && type_is_arithmetic(right)) {
         compatible = true;
     } else if (type_is_array(left) && type_is_pointer(right)) {
-
+        compatible = types_are_compatible(left->data.array.array_type, right->data.pointer.pointee);
+    } else if (type_is_pointer(left) && type_is_array(right)) {
+        compatible = types_are_compatible(left->data.pointer.pointee, right->data.array.array_type);
     }
     return compatible;
 }
@@ -429,23 +457,84 @@ void type_convert_simple_assignment(struct node *binary_operation) {
   struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
   struct type *result_type;
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
-  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
-      result_type =
-          apply_usual_arithmetic_binary_conversion(left_operand_type,
-                                                   right_operand_type);
-      add_cast_expr(binary_operation->data.binary_operation.left_operand, result_type);
-      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
-      type_convert_usual_assignment(binary_operation);
-  } else if(type_is_pointer(left_operand_type) type_is_pointer(right_operand_type)) {
-      if(types_are_compatible(left_operand_type, right_operand_type)) {
-          type_convert_usual_assignment(binary_operation);
-      } else {
-       type_checking_num_errors++; printf("ERROR: the pointer types in the assignment operation are not compatible\n");
-      }
-  } else {
-      type_checking_num_errors++; printf("ERROR: operands of assignment operation are not compatible\n");
+  if(!node_is_lvalue(binary_operation->data.binary_operation.left_operand)) {
+      type_checking_num_errors++;
+      printf("ERROR: The left operand of an assignment operation must be an lvalue\n");
+      return;
   }
-    
+  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      result_type = left_operand_type;
+      /* Cast the right operand to the type of the left operand */
+      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+  } else if(type_is_pointer(left_operand_type) && type_is_pointer(right_operand_type)) {
+      if(types_are_compatible(left_operand_type, right_operand_type)) {
+          result_type = left_operand_type;
+          add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+      } else {
+       type_checking_num_errors++;
+       printf("ERROR: the pointer types in the assignment operation are not compatible\n");
+      }
+  } else if(type_is_pointer(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      if((binary_operation->data.binary_operation.right_operand->kind == NODE_NUMBER) &&
+         (binary_operation->data.binary_operation.right_operand->data.number.value == 0)) {
+          result_type = left_operand_type;
+          add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+      } else {
+          type_checking_num_errors++;
+          printf("ERROR: The left operand is arithmetic and the right operand is a pointer. This is not allowed\n");
+      }
+  } /* xxx add void type checking too.. */
+  else {
+      type_checking_num_errors++;
+      printf("ERROR: operands of assignment operation are not compatible\n");
+  }
+
+    type_convert_assignment(binary_operation);
+}
+
+void type_convert_compound_assignment(struct node *binary_operation) {
+  struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+  struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
+  struct type *result_type;
+  assert(NODE_BINARY_OPERATION == binary_operation->kind);
+  if(!node_is_lvalue(binary_operation->data.binary_operation.left_operand)) {
+      type_checking_num_errors++;
+      printf("ERROR: The left operand of an assignment operation must be an lvalue\n");
+      return;
+  }
+  if(type_is_arithmetic(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      result_type = left_operand_type;
+      /* Cast the right operand to the type of the left operand */
+      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+  }  else {
+      type_checking_num_errors++;
+      printf("ERROR: operands of assignment operation are not compatible\n");
+  }
+
+    type_convert_assignment(binary_operation);
+}
+
+/* The left operand for += and -= can be pointer or integer. Taking care of this
+ * case */
+void type_convert_scalar_compound_assignment(struct node *binary_operation) {
+  struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
+  struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
+  struct type *result_type;
+  assert(NODE_BINARY_OPERATION == binary_operation->kind);
+  if(!node_is_lvalue(binary_operation->data.binary_operation.left_operand)) {
+      type_checking_num_errors++;
+      printf("ERROR: The left operand of an assignment operation must be an lvalue\n");
+      return;
+  }
+  if(type_is_scalar(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      result_type = left_operand_type;
+      /* Cast the right operand to the type of the left operand */
+      add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
+  }  else {
+      type_checking_num_errors++;
+      printf("ERROR: operands of assignment operation are not compatible\n");
+  }
+
     type_convert_assignment(binary_operation);
 }
 
@@ -469,6 +558,8 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
       break;
     case BINOP_ASSIGN_PLUS_EQUAL:
     case BINOP_ASSIGN_MINUS_EQUAL:
+      type_convert_scalar_compound_assignment(binary_operation);
+      break;
     case BINOP_ASSIGN_ASTERISK_EQUAL:
     case BINOP_ASSIGN_SLASH_EQUAL:
     case BINOP_ASSIGN_PERCENT_EQUAL:
@@ -477,6 +568,7 @@ void type_assign_in_binary_operation(struct node *binary_operation) {
     case BINOP_ASSIGN_AMPERSAND_EQUAL:
     case BINOP_ASSIGN_CARET_EQUAL:
     case BINOP_ASSIGN_VBAR_EQUAL:
+      type_convert_compound_assignment(binary_operation);
       /* xxx: Compound assignment */
       break;
     case BINOP_LOGICAL_OR_EXPR:
@@ -520,6 +612,61 @@ void type_assign_in_cast_expr(struct node *cast_expr) {
             cast_expr->data.cast_expr.unary_casting_expr->data.unary_operation.the_operand);
 }
 
+void type_assign_in_expr(struct node *expr) {
+    assert(NODE_EXPR == expr->kind);
+    if(expr->data.expr.expr1 != NULL) {
+        type_assign_in_expression(expr->data.expr.expr1);
+    }
+    if(expr->data.expr.expr2 != NULL) {
+        type_assign_in_expression(expr->data.expr.expr2);
+    }
+}
+
+void type_assign_in_function_call(struct node *function_call) {
+    assert(NODE_FUNCTION_CALL == function_call->kind);
+    if(function_call->data.function_call.postfix_expr != NULL) {
+        type_assign_in_expression(function_call->data.function_call.postfix_expr);
+    }
+    if(function_call->data.function_call.expression_list != NULL) {
+        type_assign_in_expression(function_call->data.function_call.expression_list);
+    }
+}
+
+void type_assign_in_statement(struct node *statement) {
+  assert(NODE_STATEMENT == statement->kind);
+  if (NULL != statement->data.statement.statement) {
+    type_assign_in_statement(statement->data.statement.statement);
+  }
+  type_assign_in_expression(statement->data.statement.expression);
+}
+
+void type_assign_in_statement_list(struct node *statement_list) {
+  assert(NODE_STATEMENT_LIST == statement_list->kind);
+  if (NULL != statement_list->data.statement_list.init) {
+    type_assign_in_expression(statement_list->data.statement_list.init);
+  }
+  type_assign_in_expression(statement_list->data.statement_list.statement);
+}
+
+void type_assign_in_compound_statement(struct node *compound_statement) {
+    if(compound_statement->data.compound_statement.declaration_or_statement_list != NULL) {
+        type_assign_in_expression(compound_statement->data.compound_statement.declaration_or_statement_list);
+    }
+}
+
+void type_assign_in_function_def_specifier(struct node *function_def_specifier) {
+    /* struct type *return_type = */
+    /*     get_type_from_type_specifier( */
+    /*         function_def_specifier->data.function_def_specifier.decl_specifier); */
+    type_assign_in_expression(function_def_specifier->data.function_def_specifier.declarator);
+
+}
+
+void type_assign_in_function_definition(struct node *function_definition) {
+    type_assign_in_expression(function_definition->data.function_definition.function_def_specifier);
+    type_assign_in_expression(function_definition->data.function_definition.compound_statement);
+}
+
 void type_assign_in_expression(struct node *expression) {
   switch (expression->kind) {
     case NODE_UNARY_OPERATION:
@@ -527,14 +674,16 @@ void type_assign_in_expression(struct node *expression) {
       break;
 
     case NODE_IDENTIFIER:
+      printf("Name : %s\n", expression->data.identifier.symbol->name);
       if (NULL == expression->data.identifier.symbol->result.type) {
-          assert(0); printf("ERROR: The identifier's type should have been defined by now\n");
+          printf("ERROR: The identifier's type should have been defined by now\n"); 
+          assert(0);
       }
       break;
 
     case NODE_NUMBER:
       expression->data.number.result.type =
-          type_basic(false, TYPE_WIDTH_INT, CONVERSION_RANK_INT);  /* xxx: 3rd argument Needs to change */
+          type_basic(false, TYPE_WIDTH_INT, CONVERSION_RANK_INT);
       break;
 
     case NODE_BINARY_OPERATION:
@@ -548,18 +697,21 @@ void type_assign_in_expression(struct node *expression) {
       /* xxx: type_assign_in_ternary_operation(expression); */
       break;
     case NODE_STATEMENT:
-      /* xxx: type_assign_in_statement(expression); */
+      type_assign_in_statement(expression);
       break;
     case NODE_STATEMENT_LIST:
       type_assign_in_statement_list(expression);
       break;
     case NODE_DECL:
+      /* Nothing to do */
       break;
     case NODE_TYPE_SPECIFIER:
+      /* Nothing to do */
       break;
     case NODE_POINTER:
       break;
     case NODE_EXPR:
+      type_assign_in_expr(expression);
       break;
     case NODE_ABSTRACT_DECL:
       break;
@@ -574,6 +726,7 @@ void type_assign_in_expression(struct node *expression) {
     case NODE_PARAMETER_DECL:
       break;
     case NODE_FUNCTION_DEF_SPECIFIER:
+      type_assign_in_function_def_specifier(expression);
       break;
     case NODE_FUNCTION_DECLARATOR:
       break;
@@ -584,8 +737,10 @@ void type_assign_in_expression(struct node *expression) {
     case NODE_LABELED_STATEMENT:
       break;
     case NODE_COMPOUND_STATEMENT:
+      type_assign_in_compound_statement(expression);
       break;
     case NODE_FUNCTION_DEFINITION:
+      type_assign_in_function_definition(expression);
       break;
     case NODE_CAST_EXPR:
       type_assign_in_cast_expr(expression);
@@ -594,19 +749,6 @@ void type_assign_in_expression(struct node *expression) {
       assert(0);
       break;
   }
-}
-
-void type_assign_in_expression_statement(struct node *expression_statement) {
-  assert(NODE_STATEMENT == expression_statement->kind);
-  type_assign_in_expression(expression_statement->data.statement.expression);
-}
-
-void type_assign_in_statement_list(struct node *statement_list) {
-  assert(NODE_STATEMENT_LIST == statement_list->kind);
-  if (NULL != statement_list->data.statement_list.init) {
-    type_assign_in_statement_list(statement_list->data.statement_list.init);
-  }
-  type_assign_in_expression_statement(statement_list->data.statement_list.statement);
 }
 
 void type_assign_in_translation_unit(struct node *translation_unit) {
