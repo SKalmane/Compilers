@@ -178,7 +178,7 @@ void symbol_add_from_expr(struct symbol_table *table, struct node *expr) {
 }
 
 void symbol_add_from_function_call(struct symbol_table *table, struct node *function_call) {
-    /* Since this is a function call, the function should already have a declaration and a definition 
+    /* Since this is a function call, the function should already have a declaration or a definition 
        by this time */
     assert(NODE_FUNCTION_CALL == function_call->kind);
     if(function_call->data.function_call.postfix_expr != NULL) {
