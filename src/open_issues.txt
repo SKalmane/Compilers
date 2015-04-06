@@ -1,0 +1,6 @@
+1. Subscript_expr does not work i.e., atoi(argv[2]) does not type check correctly.
+   This is because argv[2] is not parsed correctly in the symbol table phase itself
+
+2. comma_expr does not work i.e., if we have :
+   int shift, i;
+ - This will not work since comma_expr does not add the symbols to the symbol table correctly

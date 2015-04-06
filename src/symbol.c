@@ -28,6 +28,7 @@ struct symbol *symbol_get(struct symbol_table *table, char name[]) {
   struct symbol_list *iter;
   while(present_symbol_table != NULL) {
       for (iter = present_symbol_table->variables; NULL != iter; iter = iter->next) {
+          printf("Present symbol name: %s\n", iter->symbol.name);
           if (!strcmp(name, iter->symbol.name)) {
               return &iter->symbol;
           }
@@ -37,19 +38,18 @@ struct symbol *symbol_get(struct symbol_table *table, char name[]) {
   return NULL;
 }
 
-struct symbol *symbol_put(struct symbol_table *table, char name[],
+struct symbol *symbol_put(struct symbol_table **table, char name[],
                           struct type *type) {
   struct symbol_list *symbol_list;
-
   symbol_list = malloc(sizeof(struct symbol_list));
   assert(NULL != symbol_list);
-
+  printf("Adding symbol of name: %s\n", name);
   strncpy(symbol_list->symbol.name, name, MAX_IDENTIFIER_LENGTH);
   symbol_list->symbol.result.type = type;
   symbol_list->symbol.result.ir_operand = NULL;
 
-  symbol_list->next = table->variables;
-  table->variables = symbol_list;
+  symbol_list->next = (*table)->variables;
+  (*table)->variables = symbol_list;
 
   return &symbol_list->symbol;
 }
@@ -83,33 +83,32 @@ struct symbol *symbol_put_labels(struct symbol_table *table, char name[],
 
 void symbol_add_to_function_parameter_list(struct type *function_type,
                                            struct type *param_type) {
-    struct symbol_list *symbol_list = function_type->data.function.parameter_list;
-    while(symbol_list != NULL) {
-        symbol_list = symbol_list->next;
-    }
-    symbol_list = malloc(sizeof(struct symbol_list));
-
+    struct symbol_list *symbol_list = malloc(sizeof(struct symbol_list));
     assert(NULL != symbol_list);
-
     symbol_list->symbol.result.type = param_type;
     symbol_list->symbol.result.ir_operand = NULL;
+    symbol_list->next = function_type->data.function.parameter_list;
+    function_type->data.function.parameter_list = symbol_list;
 
     function_type->data.function.number_of_parameters++;
 }
 
-void symbol_add_from_identifier(struct symbol_table *table, struct node *identifier,
-                                struct type *type) {
+void symbol_add_from_identifier(struct symbol_table **table, struct node *identifier,
+                                struct type **type) {
   struct symbol *symbol;
   assert(NODE_IDENTIFIER == identifier->kind);
   printf("Identifier name: %s\n", identifier->data.identifier.name);
-  symbol = symbol_get(table, identifier->data.identifier.name);
+  symbol = symbol_get(*table, identifier->data.identifier.name);
   if (NULL == symbol) {
-      symbol = symbol_put(table, identifier->data.identifier.name, type);
+      if(type == NULL) {
+          symbol_table_num_errors++;
+          printf("ERROR: Type of identifier %s not defined\n", identifier->data.identifier.name);
+      } else {
+          symbol = symbol_put(table, identifier->data.identifier.name, *type);
+          printf("Just added to symbol table : %p\n", (void *)(*table));
+      }
   }
   identifier->data.identifier.symbol = symbol;
-  if(identifier->data.identifier.symbol->result.type != NULL) {
-      printf("Kind of identifier type: %d\n", (identifier->data.identifier.symbol->result.type->kind));   
-  }
 }
 
 void symbol_add_from_identifier_to_labels_list(struct symbol_table *table, struct node *identifier,
@@ -125,7 +124,7 @@ void symbol_add_from_identifier_to_labels_list(struct symbol_table *table, struc
 }
 
 void symbol_add_from_expression(struct symbol_table *table, struct node *expression,
-                                struct type *type);
+                                struct type **type);
 
 void symbol_add_from_unary_operation(struct symbol_table *table, struct node *unary_operation) {
   assert(NODE_UNARY_OPERATION == unary_operation->kind);
@@ -174,6 +173,16 @@ void symbol_add_from_expr(struct symbol_table *table, struct node *expr) {
   }
   if(expr->data.expr.expr2 != NULL) {
       symbol_add_from_expression(table, expr->data.expr.expr2, NULL);
+  }
+}
+
+void symbol_add_from_subscript_expr(struct symbol_table *table, struct node *subscript_expr) {
+  assert(NODE_SUBSCRIPT_EXPR == subscript_expr->kind);
+  if(subscript_expr->data.subscript_expr.postfix_expr != NULL) {
+      symbol_add_from_expression(table, subscript_expr->data.subscript_expr.postfix_expr, NULL);
+  }
+  if(subscript_expr->data.subscript_expr.expr != NULL) {
+      symbol_add_from_expression(table, subscript_expr->data.subscript_expr.expr, NULL);
   }
 }
 
@@ -229,12 +238,13 @@ struct type *get_type_from_pointer_declarator(struct type *type_of_pointee) {
 }
 
 void symbol_add_from_pointer_declarator(struct symbol_table *table, struct node *pointer_declarator,
-    struct type *type_of_pointee) {
+    struct type **type) {
   struct type *pointer_declarator_type = NULL;
   assert(NODE_POINTER_DECLARATOR == pointer_declarator->kind);
   assert(pointer_declarator->data.pointer_declarator.declarator != NULL);
-  pointer_declarator_type = get_type_from_pointer_declarator(type_of_pointee);
-  symbol_add_from_expression(table, pointer_declarator->data.pointer_declarator.declarator, pointer_declarator_type);
+  pointer_declarator_type = get_type_from_pointer_declarator(*type);
+  symbol_add_from_expression(table, pointer_declarator->data.pointer_declarator.declarator, &pointer_declarator_type);
+  *type = pointer_declarator_type;
 }
 
 struct type *get_type_from_type_specifier(struct node *type_specifier) {
@@ -315,41 +325,26 @@ void symbol_add_from_decl(struct symbol_table *table, struct node *decl) {
     symbol_add_from_expression(table, decl->data.decl.decl_specifier, NULL);
 
     type = get_type_from_type_specifier(decl->data.decl.decl_specifier);
-    symbol_add_from_expression(table, decl->data.decl.init_decl_list, type);
+    symbol_add_from_expression(table, decl->data.decl.init_decl_list, &type);
 }
 
-void symbol_add_from_parameter_decl(struct symbol_table *table, struct node *parameter_decl) {
-    struct type *type = NULL;
+void symbol_add_from_parameter_decl(struct symbol_table *table, struct node *parameter_decl,
+                                    struct type **type) {
     assert(NODE_PARAMETER_DECL == parameter_decl->kind);
     /* decl_specifier doesn't need to be associated with a type. Hence we
      * pass in NULL
      */
     symbol_add_from_expression(table, parameter_decl->data.parameter_decl.type_specifier, NULL);
 
-    type = get_type_from_type_specifier(parameter_decl->data.parameter_decl.type_specifier);
-    symbol_add_from_expression(table, parameter_decl->data.parameter_decl.declarator, type);
-}
-
-void symbol_add_from_function_def_specifier(struct symbol_table *table, struct node *function_def_specifier, struct type *function_type) {
-    assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
-
-    function_type->data.function.return_type =
-        get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
-
-    /* The following won't do anything since we don't need to add type_specifiers to our symbol table */
-    symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.decl_specifier, NULL);
-    if(function_def_specifier->data.function_def_specifier.declarator->kind != NODE_FUNCTION_DECLARATOR) {
-        symbol_table_num_errors++;
-        printf("ERROR: Syntax error! Incorrect function definition\n");
-    } else {
-        symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.declarator,
-                                   function_type->data.function.return_type);
+    *type = get_type_from_type_specifier(parameter_decl->data.parameter_decl.type_specifier);
+    if(parameter_decl->data.parameter_decl.declarator != NULL) {
+        symbol_add_from_expression(table, parameter_decl->data.parameter_decl.declarator, type);
     }
 }
 
 void symbol_add_from_parameter_list(struct symbol_table *table,
                                     struct node *parameter_list,
-                                    struct type *function_type) {
+                                    struct type **function_type) {
     struct type *parameter_type = NULL;
     assert(NODE_PARAMETER_LIST == parameter_list->kind);
 
@@ -358,25 +353,23 @@ void symbol_add_from_parameter_list(struct symbol_table *table,
                                        function_type);
     }
 
-    if(function_type->data.function.function_symbol_table != NULL) {
+    if((*function_type)->data.function.function_symbol_table != NULL) {
         /* This is a function definition. Add the parameters to the symbol table too */
-        symbol_add_from_expression(function_type->data.function.function_symbol_table,
-                                   parameter_list->data.parameter_list.parameter_decl, parameter_type);
+        symbol_add_from_parameter_decl((*function_type)->data.function.function_symbol_table,
+                                   parameter_list->data.parameter_list.parameter_decl, &parameter_type);
     } else {
         /* This is just a declaration. No need to add the parameters to the symbol table. xxx */
-        symbol_add_from_expression(function_type->data.function.function_symbol_table,
-                                   parameter_list->data.parameter_list.parameter_decl, parameter_type);
+        symbol_add_from_expression((*function_type)->data.function.function_symbol_table,
+                                   parameter_list->data.parameter_list.parameter_decl, &parameter_type);
     }
-
-    symbol_add_to_function_parameter_list(function_type, parameter_type);
+    symbol_add_to_function_parameter_list((*function_type), parameter_type);
 }
 
-
-void symbol_add_from_function_declarator(struct symbol_table *table, struct node *function_declarator,
-                                         struct type *return_type) {
-    struct type *function_type = type_function(return_type);
+void symbol_add_from_function_declarator_from_definition(struct symbol_table *table, 
+                                                         struct node *function_declarator,
+                                                         struct type **function_type) {
     assert(NODE_FUNCTION_DECLARATOR == function_declarator->kind);
-    function_type->data.function.function_symbol_table =  malloc(sizeof(struct symbol_table));
+    assert((*function_type)->data.function.function_symbol_table != NULL);
 
     /* Append the parameter_list into the function-type symbol as well */
     symbol_add_from_parameter_list(table,
@@ -384,6 +377,38 @@ void symbol_add_from_function_declarator(struct symbol_table *table, struct node
                                    function_type);
     symbol_add_from_expression(table, function_declarator->data.function_declarator.direct_declarator,
                                function_type);
+}
+
+void symbol_add_from_function_def_specifier(struct symbol_table *table, struct node *function_def_specifier, struct type **function_type) {
+    assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
+
+    (*function_type)->data.function.return_type =
+        get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
+
+    /* The following won't do anything since we don't need to add type_specifiers to our symbol table */
+    symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.decl_specifier, NULL);
+    if(function_def_specifier->data.function_def_specifier.declarator->kind != NODE_FUNCTION_DECLARATOR) {
+        symbol_table_num_errors++;
+        printf("ERROR: Syntax error! Incorrect function definition\n");
+    } else {
+        symbol_add_from_function_declarator_from_definition(table, 
+                                                            function_def_specifier->data.function_def_specifier.declarator, 
+                                                            function_type);
+    }
+}
+
+void symbol_add_from_function_declarator(struct symbol_table *table, struct node *function_declarator,
+                                         struct type **return_type) {
+    struct type *function_type = type_function(*return_type);
+    assert(NODE_FUNCTION_DECLARATOR == function_declarator->kind);
+    function_type->data.function.function_symbol_table =  malloc(sizeof(struct symbol_table));
+
+    /* Append the parameter_list into the function-type symbol as well */
+    symbol_add_from_parameter_list(table,
+                                   function_declarator->data.function_declarator.parameter_list,
+                                   &function_type);
+    symbol_add_from_expression(table, function_declarator->data.function_declarator.direct_declarator,
+                               &function_type);
 }
 
 unsigned long symbol_get_array_size_from_constant_expr(struct node *constant_expr) {
@@ -504,13 +529,13 @@ unsigned long symbol_get_array_size_from_constant_expr(struct node *constant_exp
 }
 
 void symbol_add_from_array_declarator(struct symbol_table *table, struct node *array_declarator,
-                                         struct type *array_type) {
+                                         struct type **array_type) {
     unsigned long array_size = 0;
     assert(NODE_ARRAY_DECLARATOR == array_declarator->kind);
     if(NULL != array_declarator->data.array_declarator.constant_expr) {
         array_size = symbol_get_array_size_from_constant_expr(array_declarator->data.array_declarator.constant_expr);
     }
-    array_type = type_array(array_type, array_size);
+    (*array_type) = type_array(*array_type, array_size);
 
     symbol_add_from_expression(table, array_declarator->data.array_declarator.direct_declarator,
                                array_type);
@@ -553,7 +578,7 @@ void symbol_add_from_function_definition(struct symbol_table *table, struct node
     /* We need to make sure we pass in the right symbol table here.. */
     symbol_add_from_expression(table,
                                function_definition->data.function_definition.function_def_specifier,
-                               function_type);
+                               &function_type);
     /* We need to make sure we pass in the right symbol table here.. */
     symbol_add_from_compound_statement(function_type->data.function.function_symbol_table,
 				       function_definition->data.function_definition.compound_statement, true);
@@ -561,7 +586,7 @@ void symbol_add_from_function_definition(struct symbol_table *table, struct node
 }
 
 void symbol_add_from_expression(struct symbol_table *table, struct node *expression,
-                                struct type *type) {
+                                struct type **type) {
   switch (expression->kind) {
     case NODE_UNARY_OPERATION:
       symbol_add_from_unary_operation(table, expression);
@@ -579,7 +604,7 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       symbol_add_from_statement_list(table, expression);
       break;
     case NODE_IDENTIFIER:
-      symbol_add_from_identifier(table, expression, type);
+      symbol_add_from_identifier(&table, expression, type);
       break;
     case NODE_NUMBER:
       break;
@@ -609,7 +634,7 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       symbol_add_from_decl(table, expression);
       break;
     case NODE_PARAMETER_DECL:
-      symbol_add_from_parameter_decl(table, expression);
+      symbol_add_from_parameter_decl(table, expression, type);
       break;
     case NODE_FUNCTION_DEF_SPECIFIER:
       symbol_add_from_function_def_specifier(table, expression, type);
@@ -650,6 +675,9 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       break;
     case NODE_EXPRESSION_LIST:
       symbol_add_from_expression_list(table, expression);
+      break;
+    case NODE_SUBSCRIPT_EXPR:
+      symbol_add_from_subscript_expr(table, expression);
       break;
     default:
       assert(0);
@@ -715,6 +743,7 @@ void symbol_print_type(FILE *output, struct type *type) {
         fprintf(output, "*** End Return type: *** \n");
         fprintf(output, " Number of parameters: %d\n", type->data.function.number_of_parameters);
         symbol_list = type->data.function.function_symbol_table->variables;
+        /* symbol_list = type->data.function.parameter_list; */
         for(i = 0; i < type->data.function.number_of_parameters; i++) {
             fprintf(output, " === Parameter %d: \n", i+1);
             symbol_print_type(output, symbol_list->symbol.result.type);

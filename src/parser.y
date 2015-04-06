@@ -350,8 +350,9 @@ parameter_decl
   : type_specifiers declarator
       { $$ = node_parameter_decl($1, $2); }
   | type_specifiers
+      { $$ = node_parameter_decl($1, NULL); }
   | type_specifiers abstract_declarator
-      {$$ = node_expr($1, $2, CONCAT_EXPR); }
+      { $$ = node_parameter_decl($1, $2); }
 ;
 
 pointer

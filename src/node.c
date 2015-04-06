@@ -259,6 +259,14 @@ struct node *node_expr(struct node *expr1,
     return node;
 }
 
+struct node *node_subscript_expr(struct node *postfix_expr,
+                                 struct node *expr) {
+    struct node *node = node_create(NODE_SUBSCRIPT_EXPR);
+    node->data.subscript_expr.postfix_expr = postfix_expr;
+    node->data.subscript_expr.expr = expr;
+    return node;
+}
+
 struct node *node_for_expr(struct node *initial_clause,
                            struct node *expr1,
                            struct node *expr2) {
@@ -399,7 +407,13 @@ struct result *node_get_result(struct node *expression) {
       return &expression->data.cast_expr.result;
     case NODE_FUNCTION_CALL:
       return &expression->data.function_call.result;
+    case NODE_STRING:
+      return &expression->data.number.result;
     default:
+      printf("Expression->kind: %d\n", expression->kind);
+      if(expression->kind == 11) {
+          printf("Kind of expr: %d\n", expression->data.expr.type_of_expr);
+      }
       assert(0);
       return NULL;
   }
@@ -773,6 +787,15 @@ void node_print_statement(FILE *output, struct node *statement) {
 
 }
 
+void node_print_subscript_expr(FILE *output, struct node *subscript_expr) {
+    node_print_handler(output, subscript_expr->data.subscript_expr.postfix_expr);
+    fputs("[", output);
+    if(NULL != subscript_expr->data.subscript_expr.expr) {
+        node_print_handler(output, subscript_expr->data.subscript_expr.expr);
+    }
+    fputs("]", output);
+}
+
 void node_print_expr(FILE *output, struct node *expr) {
   assert(NODE_EXPR == expr->kind);
 
@@ -953,6 +976,10 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_EXPRESSION_LIST:
       node_print_expression_list(output, expression);
+      break;
+    case NODE_SUBSCRIPT_EXPR:
+      node_print_subscript_expr(output, expression);
+      break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);
       fprintf(output, "Can't recognize expression!\n");
