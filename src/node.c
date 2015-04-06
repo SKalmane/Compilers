@@ -333,6 +333,14 @@ struct node *node_function_call(struct node *postfix_expr,
     return node;
 }
 
+struct node *node_expression_list(struct node *expression_list,
+                                struct node *assignment_expr) {
+    struct node *node = node_create(NODE_EXPRESSION_LIST);
+    node->data.expression_list.expression_list = expression_list;
+    node->data.expression_list.assignment_expr = assignment_expr;
+    return node;
+}
+
 struct node *node_function_declarator(struct node *direct_declarator,
                                       struct node *parameter_list) {
     struct node *node = node_create(NODE_FUNCTION_DECLARATOR);
@@ -389,6 +397,8 @@ struct result *node_get_result(struct node *expression) {
       return &expression->data.binary_operation.result;
     case NODE_CAST_EXPR:
       return &expression->data.cast_expr.result;
+    case NODE_FUNCTION_CALL:
+      return &expression->data.function_call.result;
     default:
       assert(0);
       return NULL;
@@ -825,6 +835,16 @@ void node_print_function_call(FILE *output, struct node *function_call) {
     fputs(") ", output);
 }
 
+void node_print_expression_list(FILE *output, struct node *expression_list) {
+  if(expression_list->data.expression_list.expression_list != NULL) {
+    node_print_handler(output, expression_list->data.expression_list.expression_list);
+  }
+    fputs(", ", output);
+    if(NULL != expression_list->data.expression_list.assignment_expr) {
+      node_print_handler(output, expression_list->data.expression_list.assignment_expr);
+    }
+}
+
 void node_print_if_statement(FILE *output, struct node *statement) {
   assert(NODE_IF_STATEMENT == statement->kind);
   fprintf(output, "if(");
@@ -931,6 +951,8 @@ void node_print_handler(FILE *output, struct node *expression) {
     case NODE_FUNCTION_CALL:
       node_print_function_call(output, expression);
       break;
+    case NODE_EXPRESSION_LIST:
+      node_print_expression_list(output, expression);
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);
       fprintf(output, "Can't recognize expression!\n");

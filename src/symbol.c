@@ -189,6 +189,16 @@ void symbol_add_from_function_call(struct symbol_table *table, struct node *func
     }
 }
 
+void symbol_add_from_expression_list(struct symbol_table *table, struct node *expression_list) {
+    assert(NODE_EXPRESSION_LIST == expression_list->kind);
+    if(expression_list->data.expression_list.expression_list != NULL) {
+      symbol_add_from_expression(table, expression_list->data.expression_list.expression_list, NULL);
+    }
+    if(expression_list->data.expression_list.assignment_expr != NULL) {
+      symbol_add_from_expression(table, expression_list->data.expression_list.assignment_expr, NULL);
+    }
+}
+
 void symbol_add_from_for_expr(struct symbol_table *table, struct node *for_expr) {
   assert(NODE_FOR_EXPR == for_expr->kind);
   if(for_expr->data.for_expr.initial_clause != NULL) {
@@ -637,6 +647,9 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       break;
     case NODE_FUNCTION_CALL:
       symbol_add_from_function_call(table, expression);
+      break;
+    case NODE_EXPRESSION_LIST:
+      symbol_add_from_expression_list(table, expression);
       break;
     default:
       assert(0);

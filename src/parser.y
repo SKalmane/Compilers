@@ -180,15 +180,16 @@ subscript_expr
 
 expression_list
   : assignment_expr
+      { $$ = node_expression_list(NULL, $1); }
   | expression_list COMMA assignment_expr
-      { $$ = node_expr($1, $3, EXPRESSION_LIST); }
+      { $$ = node_expression_list($1, $3); }
 ;
 
 function_call
   : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN
-      { $$ = node_expr($1, $3, FUNCTION_CALL); }
+      { $$ = node_function_call($1, $3); }
   | postfix_expr LEFT_PAREN RIGHT_PAREN
-      { $$ = node_expr($1, NULL, FUNCTION_CALL); }
+      { $$ = node_function_call($1, NULL); }
 ;
 
 postincrement_expr

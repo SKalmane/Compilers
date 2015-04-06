@@ -314,7 +314,6 @@ void type_assign_in_unary_operation(struct node *unary_operation) {
       node_get_result(unary_operation)->type = node_get_result(the_operand)->type;
       break;
     case TYPE_ARRAY:
-      printf("Hi..\n");
       apply_usual_array_unary_conversion(unary_operation);
       break;
     case TYPE_FUNCTION:
@@ -481,7 +480,7 @@ void type_convert_simple_assignment(struct node *binary_operation) {
           add_cast_expr(binary_operation->data.binary_operation.right_operand, result_type);
       } else {
           type_checking_num_errors++;
-          printf("ERROR: The left operand is arithmetic and the right operand is a pointer. This is not allowed\n");
+          printf("ERROR: The left operand is pointer and the right operand is a number which is not 0. This is not allowed\n");
       }
   } /* xxx add void type checking too.. */
   else {
@@ -622,13 +621,45 @@ void type_assign_in_expr(struct node *expr) {
     }
 }
 
+void type_assign_in_expression_list(struct node *expression_list,
+				    int * number_of_parameters) {
+  if(expression_list->data.expression_list.expression_list != NULL) {
+    type_assign_in_expression_list(expression_list->data.expression_list.expression_list, number_of_parameters);
+  }
+  (*number_of_parameters)++;
+  type_assign_in_expression(expression_list->data.expression_list.assignment_expr);
+}
+
 void type_assign_in_function_call(struct node *function_call) {
+  struct type *postfix_expr_type;
+  struct type *return_type_of_function;
+  int number_of_parameters = 0;
+  int i = 0;
+  struct symbol_table *parameter_list;
+  struct type *parameter_type;
     assert(NODE_FUNCTION_CALL == function_call->kind);
     if(function_call->data.function_call.postfix_expr != NULL) {
-        type_assign_in_expression(function_call->data.function_call.postfix_expr);
+      type_assign_in_expression_list(function_call->data.function_call.postfix_expr, &number_of_parameters);
     }
     if(function_call->data.function_call.expression_list != NULL) {
-        type_assign_in_expression(function_call->data.function_call.expression_list);
+      type_assign_in_expression(function_call->data.function_call.expression_list);
+
+    }
+    postfix_expr_type = node_get_result(function_call->data.function_call.postfix_expr)->type;
+    assert(postfix_expr_type->kind == TYPE_FUNCTION);
+    return_type_of_function = postfix_expr_type->data.function.return_type;
+     printf("Return type of postfix expr: %d\n", return_type_of_function->kind);
+    printf("Number of parameters: %d\n", postfix_expr_type->data.function.number_of_parameters);
+    function_call->data.function_call.result.type = return_type_of_function;
+    if(number_of_parameters != postfix_expr_type->data.function.number_of_parameters) {
+      type_checking_num_errors++; 
+      printf("ERROR: Number of parameters in function call not same as declaration or definition\n");
+    } else {
+      for(i = 0; i < number_of_parameters; i++) {
+	parameter_list = postfix_expr_type->data.function.parameter_list;	
+	parameter_type = parameter_list.symbol.result.type;
+	parameter_list = parameter_list->next;
+      }
     }
 }
 
@@ -744,6 +775,9 @@ void type_assign_in_expression(struct node *expression) {
       break;
     case NODE_CAST_EXPR:
       type_assign_in_cast_expr(expression);
+      break;
+    case NODE_FUNCTION_CALL:
+      type_assign_in_function_call(expression);
       break;
     default:
       assert(0);
