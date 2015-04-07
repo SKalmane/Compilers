@@ -41,6 +41,8 @@ struct type;
 #define NODE_FUNCTION_CALL                   26
 #define NODE_EXPRESSION_LIST                 27
 #define NODE_SUBSCRIPT_EXPR                  28
+#define NODE_COMMA_EXPR                      29
+#define NODE_INITIALIZED_DECL_LIST           30
 /* ================================================== */
 
 /* ================================================== */
@@ -192,7 +194,16 @@ struct node {
       struct {
           struct node *postfix_expr;
 	  struct node *expr;
+	struct result result;
       } subscript_expr;
+      struct {
+          struct node *expr;
+	  struct node *assignment_expr;
+      } comma_expr;
+      struct {
+	struct node *initialized_decl_list;
+	struct node *initialized_decl;
+      } initialized_decl_list;
   } data;
 };
 
@@ -368,6 +379,12 @@ struct node *node_function_call(struct node *postfix_expr, struct node *expressi
 struct node *node_expression_list(struct node *expression_list, struct node *assignment_expr);
 
 struct node *node_subscript_expr(struct node *postfix_expr, struct node *expr);
+
+struct node *node_comma_expr(struct node *expr, 
+			     struct node *assignment_expr);
+
+struct node *node_initialized_decl_list(struct node *initialized_decl_list, 
+					struct node *initialized_decl);
 
 struct result *node_get_result(struct node *expression);
 

@@ -292,6 +292,7 @@ void apply_usual_array_unary_conversion(struct node *unary_operation) {
 
     assert(NODE_UNARY_OPERATION == unary_operation->kind);
     assert(operand_type->kind == TYPE_ARRAY);
+    printf("Converting array to pointer.. \n");
     add_cast_expr(the_operand, conversion_type);
     node_get_result(unary_operation)->type = type_pointer(
         node_get_result(the_operand)->type->data.array.array_type);
@@ -439,6 +440,8 @@ void type_convert_additive(struct node *binary_operation) {
 bool types_are_compatible(struct type *left, /* in */
                           struct type *right /* in */) {
     bool compatible = false;
+    printf("Type of left: %d\n", left->kind);
+    printf("Type of right: %d\n", right->kind);
     if(type_is_pointer(left) && type_is_pointer(right)) {
         compatible = types_are_compatible(left->data.pointer.pointee, right->data.pointer.pointee);
     } else if (type_is_arithmetic(left) && type_is_arithmetic(right)) {
@@ -673,7 +676,19 @@ void type_assign_in_function_call(struct node *function_call) {
     function_call->data.function_call.result.type = return_type_of_function;
 }
 
+void type_assign_in_subscript_expr(struct node *subscript_expr) {
+  struct type *type;
+  assert(NODE_SUBSCRIPT_EXPR == subscript_expr->kind);
+  if(subscript_expr->data.subscript_expr.postfix_expr != NULL) {
+    type_assign_in_expression(subscript_expr->data.subscript_expr.postfix_expr);
+  }
+  type = node_get_result(subscript_expr->data.subscript_expr.postfix_expr)->type;
+  assert(type->kind == TYPE_ARRAY);
+  node_get_result(subscript_expr)->type = type->data.array.array_type;
+}
+
 void type_assign_in_statement(struct node *statement) {
+  printf("Statement kind: %d\n", statement->kind);
   assert(NODE_STATEMENT == statement->kind);
   if (NULL != statement->data.statement.statement) {
     type_assign_in_statement(statement->data.statement.statement);
@@ -788,6 +803,9 @@ void type_assign_in_expression(struct node *expression) {
       break;
     case NODE_FUNCTION_CALL:
       type_assign_in_function_call(expression);
+      break;
+    case NODE_SUBSCRIPT_EXPR:
+      type_assign_in_subscript_expr(expression);
       break;
     default:
       assert(0);

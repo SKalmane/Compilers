@@ -176,6 +176,28 @@ void symbol_add_from_expr(struct symbol_table *table, struct node *expr) {
   }
 }
 
+void symbol_add_from_comma_expr(struct symbol_table *table, struct node *comma_expr, struct type **type) {
+  assert(NODE_COMMA_EXPR == comma_expr->kind);
+  printf("------------- Comma expr.. %d\n", type == NULL);
+  if(comma_expr->data.comma_expr.expr != NULL) {
+      symbol_add_from_expression(table, comma_expr->data.comma_expr.expr, type);
+  }
+  if(comma_expr->data.comma_expr.assignment_expr != NULL) {
+    symbol_add_from_expression(table, comma_expr->data.comma_expr.assignment_expr, type);
+  }
+}
+
+void symbol_add_from_initialized_decl_list(struct symbol_table *table, 
+					   struct node *initialized_decl_list, 
+					   struct type **type) {
+  if(initialized_decl_list->data.initialized_decl_list.initialized_decl_list != NULL) {
+      symbol_add_from_expression(table, initialized_decl_list->data.initialized_decl_list.initialized_decl_list, type);
+  }
+  if(initialized_decl_list->data.initialized_decl_list.initialized_decl != NULL) {
+    symbol_add_from_expression(table, initialized_decl_list->data.initialized_decl_list.initialized_decl, type);
+  }
+}
+
 void symbol_add_from_subscript_expr(struct symbol_table *table, struct node *subscript_expr) {
   assert(NODE_SUBSCRIPT_EXPR == subscript_expr->kind);
   if(subscript_expr->data.subscript_expr.postfix_expr != NULL) {
@@ -678,6 +700,12 @@ void symbol_add_from_expression(struct symbol_table *table, struct node *express
       break;
     case NODE_SUBSCRIPT_EXPR:
       symbol_add_from_subscript_expr(table, expression);
+      break;
+    case NODE_COMMA_EXPR:
+      symbol_add_from_comma_expr(table, expression, type);
+      break;
+   case NODE_INITIALIZED_DECL_LIST:
+      symbol_add_from_initialized_decl_list(table, expression, type);
       break;
     default:
       assert(0);
