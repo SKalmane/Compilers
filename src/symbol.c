@@ -187,8 +187,8 @@ void symbol_add_from_comma_expr(struct symbol_table *table, struct node *comma_e
   }
 }
 
-void symbol_add_from_initialized_decl_list(struct symbol_table *table, 
-					   struct node *initialized_decl_list, 
+void symbol_add_from_initialized_decl_list(struct symbol_table *table,
+					   struct node *initialized_decl_list,
 					   struct type **type) {
   if(initialized_decl_list->data.initialized_decl_list.initialized_decl_list != NULL) {
       symbol_add_from_expression(table, initialized_decl_list->data.initialized_decl_list.initialized_decl_list, type);
@@ -209,7 +209,7 @@ void symbol_add_from_subscript_expr(struct symbol_table *table, struct node *sub
 }
 
 void symbol_add_from_function_call(struct symbol_table *table, struct node *function_call) {
-    /* Since this is a function call, the function should already have a declaration or a definition 
+    /* Since this is a function call, the function should already have a declaration or a definition
        by this time */
     assert(NODE_FUNCTION_CALL == function_call->kind);
     if(function_call->data.function_call.postfix_expr != NULL) {
@@ -387,7 +387,7 @@ void symbol_add_from_parameter_list(struct symbol_table *table,
     symbol_add_to_function_parameter_list((*function_type), parameter_type);
 }
 
-void symbol_add_from_function_declarator_from_definition(struct symbol_table *table, 
+void symbol_add_from_function_declarator_from_definition(struct symbol_table *table,
                                                          struct node *function_declarator,
                                                          struct type **function_type) {
     assert(NODE_FUNCTION_DECLARATOR == function_declarator->kind);
@@ -413,8 +413,8 @@ void symbol_add_from_function_def_specifier(struct symbol_table *table, struct n
         symbol_table_num_errors++;
         printf("ERROR: Syntax error! Incorrect function definition\n");
     } else {
-        symbol_add_from_function_declarator_from_definition(table, 
-                                                            function_def_specifier->data.function_def_specifier.declarator, 
+        symbol_add_from_function_declarator_from_definition(table,
+                                                            function_def_specifier->data.function_def_specifier.declarator,
                                                             function_type);
     }
 }
@@ -571,7 +571,7 @@ void symbol_add_from_labeled_statement(struct symbol_table *table, struct node *
                                               label_type);
 }
 
-void symbol_add_from_compound_statement(struct symbol_table *table, struct node *compound_statement, 
+void symbol_add_from_compound_statement(struct symbol_table *table, struct node *compound_statement,
 					bool part_of_function_definition) {
     assert(NODE_COMPOUND_STATEMENT == compound_statement->kind);
 

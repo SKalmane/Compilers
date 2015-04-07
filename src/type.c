@@ -632,20 +632,20 @@ void type_assign_in_expression_list(struct node *expression_list,
       type_assign_in_expression(expression_list->data.expression_list.assignment_expr);
       printf("Type of prototype argument: %d\n", parameter_list->symbol.result.type->kind);
       printf("Type of function call argument: %d\n", node_get_result(expression_list->data.expression_list.assignment_expr)->type->kind);
-      if(!types_are_compatible(parameter_list->symbol.result.type, 
+      if(!types_are_compatible(parameter_list->symbol.result.type,
                                node_get_result(expression_list->data.expression_list.assignment_expr)->type)) {
           type_checking_num_errors++;
           printf("ERROR: The type of arguments passed in to the function do not match the prototype\n");
-      } else if(((parameter_list->next != NULL) && 
+      } else if(((parameter_list->next != NULL) &&
                  (expression_list->data.expression_list.expression_list == NULL)) ||
-                ((parameter_list->next == NULL) && 
+                ((parameter_list->next == NULL) &&
                  (expression_list->data.expression_list.expression_list != NULL))) {
-          type_checking_num_errors++; 
+          type_checking_num_errors++;
           printf("ERROR: Number of parameters in function call not same as declaration or definition\n");
       } else {
           parameter_list = parameter_list->next;
           if(expression_list->data.expression_list.expression_list != NULL) {
-              type_assign_in_expression_list(expression_list->data.expression_list.expression_list, 
+              type_assign_in_expression_list(expression_list->data.expression_list.expression_list,
                                              number_of_parameters, parameter_list);
           }
       }
@@ -669,9 +669,9 @@ void type_assign_in_function_call(struct node *function_call) {
     printf("Number of parameters: %d\n", postfix_expr_type->data.function.number_of_parameters);
     parameter_list = postfix_expr_type->data.function.parameter_list;
     if(function_call->data.function_call.expression_list != NULL) {
-        type_assign_in_expression_list(function_call->data.function_call.expression_list, 
+        type_assign_in_expression_list(function_call->data.function_call.expression_list,
                                        &number_of_parameters, parameter_list);
-        
+
     }
     function_call->data.function_call.result.type = return_type_of_function;
 }
@@ -732,7 +732,7 @@ void type_assign_in_expression(struct node *expression) {
     case NODE_IDENTIFIER:
       printf("Name : %s\n", expression->data.identifier.symbol->name);
       if (NULL == expression->data.identifier.symbol->result.type) {
-          printf("ERROR: The identifier's type should have been defined by now\n"); 
+          printf("ERROR: The identifier's type should have been defined by now\n");
           assert(0);
       }
       break;

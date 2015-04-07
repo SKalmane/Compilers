@@ -913,7 +913,7 @@ void node_print_statement_list(FILE *output, struct node *statement_list) {
 
 void node_print_comma_expr(FILE *output, struct node *comma_expr) {
   assert(NODE_COMMA_EXPR == comma_expr->kind);
-  
+
   if (NULL != comma_expr->data.comma_expr.expr) {
     node_print_handler(output, comma_expr->data.comma_expr.expr);
   }
@@ -925,7 +925,7 @@ void node_print_comma_expr(FILE *output, struct node *comma_expr) {
 
 void node_print_initialized_decl_list(FILE *output, struct node *initialized_decl_list) {
   assert(NODE_INITIALIZED_DECL_LIST == initialized_decl_list->kind);
-  
+
   if (NULL != initialized_decl_list->data.initialized_decl_list.initialized_decl_list) {
     node_print_handler(output, initialized_decl_list->data.initialized_decl_list.initialized_decl_list);
   }

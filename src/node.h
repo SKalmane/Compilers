@@ -380,10 +380,10 @@ struct node *node_expression_list(struct node *expression_list, struct node *ass
 
 struct node *node_subscript_expr(struct node *postfix_expr, struct node *expr);
 
-struct node *node_comma_expr(struct node *expr, 
+struct node *node_comma_expr(struct node *expr,
 			     struct node *assignment_expr);
 
-struct node *node_initialized_decl_list(struct node *initialized_decl_list, 
+struct node *node_initialized_decl_list(struct node *initialized_decl_list,
 					struct node *initialized_decl);
 
 struct result *node_get_result(struct node *expression);
