@@ -199,24 +199,40 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
   }
 }
 
-void ir_generate_for_expression(struct node *expression) {
-  switch (expression->kind) {
-    case NODE_IDENTIFIER:
-      ir_generate_for_identifier(expression);
-      break;
-
-    case NODE_NUMBER:
-      ir_generate_for_number(expression);
-      break;
-
-    case NODE_BINARY_OPERATION:
-      ir_generate_for_binary_operation(expression);
-      break;
-
-    default:
-      assert(0);
-      break;
+void ir_generate_for_compound_statement(struct node *compound_statement) {
+    /* Nothing to do with the function_def_specifier since it is not an expression. 
+     * We only care about the compound_statement */
+  struct node *declaration_or_statement_list = 
+      compound_statement->data.compound_statement.declaration_or_statement_list;
+  
+  assert(NODE_COMPOUND_STATEMENT == compound_statement->kind);
+  if(declaration_or_statement_list != NULL) {
+      ir_generate_for_expression(declaration_or_statement_list);
+      compound_statement->ir = declaration_or_statement_list->ir;
   }
+}
+
+void ir_generate_for_function_definition(struct node *function_definition) {
+    /* Nothing to do with the function_def_specifier since it is not an expression. 
+     * We only care about the compound_statement */
+  struct node *compound_statement = function_definition->data.function_definition.compound_statement;
+  
+  assert(NODE_FUNCTION_DEFINITION == function_definition->kind);
+
+  ir_generate_for_expression(compound_statement);
+  function_definition->ir = compound_statement->ir;
+}
+
+void ir_generate_for_while_statement(struct node *while_statement) {
+  struct node *expression = while_statement->data.statement.expression;
+  /* struct node *statement_within = while_statement->data.statement.statement; */
+  struct ir_instruction *instruction;
+  assert(NODE_STATEMENT == while_statement->kind);
+  ir_generate_for_expression(expression);
+  instruction = ir_instruction(IR_NO_OPERATION);
+  /* xxx: Need to fix this.. This is just a template */
+  while_statement->ir = ir_copy(while_statement->data.statement.expression->ir);
+  ir_append(while_statement->ir, instruction);
 }
 
 void ir_generate_for_expression_statement(struct node *expression_statement) {
@@ -232,12 +248,28 @@ void ir_generate_for_expression_statement(struct node *expression_statement) {
   ir_append(expression_statement->ir, instruction);
 }
 
+void ir_generate_for_statement(struct node *statement) {
+
+  assert(NODE_STATEMENT == statement->kind);
+  switch(statement->data.statement.type_of_statement) {
+    case EXPRESSION_STATEMENT_TYPE:
+      ir_generate_for_expression_statement(statement);
+      break;
+    case WHILE_STATEMENT_TYPE:
+      ir_generate_for_while_statement(statement);
+      break;
+    default:
+      assert(0);
+      break;
+  }
+}
+
 void ir_generate_for_statement_list(struct node *statement_list) {
   struct node *init = statement_list->data.statement_list.init;
   struct node *statement = statement_list->data.statement_list.statement;
 
   assert(NODE_STATEMENT_LIST == statement_list->kind);
-
+  
   if (NULL != init) {
     ir_generate_for_statement_list(init);
     ir_generate_for_expression_statement(statement);
@@ -245,6 +277,53 @@ void ir_generate_for_statement_list(struct node *statement_list) {
   } else {
     ir_generate_for_expression_statement(statement);
     statement_list->ir = statement->ir;
+  }
+}
+
+void ir_generate_for_expression(struct node *expression) {
+  switch (expression->kind) {
+    case NODE_IDENTIFIER:
+      ir_generate_for_identifier(expression);
+      break;
+
+    case NODE_NUMBER:
+      ir_generate_for_number(expression);
+      break;
+
+    case NODE_BINARY_OPERATION:
+      ir_generate_for_binary_operation(expression);
+      break;
+
+    case NODE_DECL:
+      /* nothing to do for declarations */
+      break;
+    case NODE_FUNCTION_DEFINITION:
+      ir_generate_for_function_definition(expression);
+      break;
+   case NODE_COMPOUND_STATEMENT:
+      ir_generate_for_compound_statement(expression);
+      break;
+    case NODE_STATEMENT:
+      ir_generate_for_statement(expression);
+    default:
+      assert(0);
+      break;
+  }
+}
+
+void ir_generate_for_translation_unit(struct node *translation_unit) {
+  struct node *top_level_decl = translation_unit->data.translation_unit.top_level_decl;
+  struct node *translation_unit_within = translation_unit->data.translation_unit.translation_unit;
+
+  assert(NODE_TRANSLATION_UNIT == translation_unit->kind);
+
+  if (NULL != translation_unit_within) {
+    ir_generate_for_translation_unit(translation_unit_within);
+    ir_generate_for_expression(top_level_decl);
+    translation_unit->ir = ir_concatenate(translation_unit_within->ir, top_level_decl->ir);
+  } else {
+    ir_generate_for_expression(top_level_decl);
+    translation_unit->ir = top_level_decl->ir;
   }
 }
 
