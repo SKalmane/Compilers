@@ -175,7 +175,7 @@ primary_expr
 
 subscript_expr
   : postfix_expr LEFT_SQUARE expr RIGHT_SQUARE
-      { $$ = node_expr($1, $3, SUBSCRIPT_EXPR); }
+      { $$ = node_subscript_expr($1, $3); }
 ;
 
 expression_list
@@ -309,7 +309,7 @@ comma_expr
   : assignment_expr
       { $$ = node_expr(NULL, $1, ASSIGNMENT_EXPR); }
   | expr COMMA assignment_expr
-      { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
+  { $$ = node_comma_expr($1, $3); }
 ;
 
 expr
@@ -416,7 +416,7 @@ initialized_decl
 initialized_decl_list
   : initialized_decl
   | initialized_decl_list COMMA initialized_decl
-      { $$ = node_expr($1, $3, COMMA_SEPARATED_STATEMENT); }
+      { $$ = node_initialized_decl_list($1, $3); }
 ;
 
 decl_specifiers

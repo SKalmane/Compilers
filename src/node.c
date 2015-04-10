@@ -395,6 +395,22 @@ struct node *node_function_definition(struct node *function_def_specifier,
     return node;
 }
 
+struct node *node_comma_expr(struct node *expr,
+                                      struct node *assignment_expr) {
+  struct node *node = node_create(NODE_COMMA_EXPR);
+  node->data.comma_expr.expr = expr;
+  node->data.comma_expr.assignment_expr = assignment_expr;
+  return node;
+}
+
+struct node *node_initialized_decl_list(struct node *initialized_decl_list,
+					struct node *initialized_decl) {
+  struct node *node = node_create(NODE_INITIALIZED_DECL_LIST);
+  node->data.initialized_decl_list.initialized_decl_list = initialized_decl_list;
+  node->data.initialized_decl_list.initialized_decl = initialized_decl;
+  return node;
+}
+
 struct result *node_get_result(struct node *expression) {
   switch (expression->kind) {
     case NODE_NUMBER:
@@ -409,6 +425,8 @@ struct result *node_get_result(struct node *expression) {
       return &expression->data.function_call.result;
     case NODE_STRING:
       return &expression->data.number.result;
+    case NODE_SUBSCRIPT_EXPR:
+      return &expression->data.subscript_expr.result;
     default:
       printf("Expression->kind: %d\n", expression->kind);
       if(expression->kind == 11) {
@@ -893,6 +911,30 @@ void node_print_statement_list(FILE *output, struct node *statement_list) {
   fputs("\n", output);
 }
 
+void node_print_comma_expr(FILE *output, struct node *comma_expr) {
+  assert(NODE_COMMA_EXPR == comma_expr->kind);
+
+  if (NULL != comma_expr->data.comma_expr.expr) {
+    node_print_handler(output, comma_expr->data.comma_expr.expr);
+  }
+  fputs(", ", output);
+  if(NULL != comma_expr->data.comma_expr.assignment_expr) {
+    node_print_handler(output, comma_expr->data.comma_expr.assignment_expr);
+  }
+}
+
+void node_print_initialized_decl_list(FILE *output, struct node *initialized_decl_list) {
+  assert(NODE_INITIALIZED_DECL_LIST == initialized_decl_list->kind);
+
+  if (NULL != initialized_decl_list->data.initialized_decl_list.initialized_decl_list) {
+    node_print_handler(output, initialized_decl_list->data.initialized_decl_list.initialized_decl_list);
+  }
+  fputs(", ", output);
+  if(NULL != initialized_decl_list->data.initialized_decl_list.initialized_decl) {
+    node_print_handler(output, initialized_decl_list->data.initialized_decl_list.initialized_decl);
+  }
+}
+
 void node_print_handler(FILE *output, struct node *expression) {
   assert(NULL != expression);
   switch (expression->kind) {
@@ -979,6 +1021,12 @@ void node_print_handler(FILE *output, struct node *expression) {
       break;
     case NODE_SUBSCRIPT_EXPR:
       node_print_subscript_expr(output, expression);
+      break;
+    case NODE_COMMA_EXPR:
+      node_print_comma_expr(output, expression);
+      break;
+    case NODE_INITIALIZED_DECL_LIST:
+      node_print_initialized_decl_list(output, expression);
       break;
     default:
       fprintf(output, "Type of expression is %d\n", expression->kind);
