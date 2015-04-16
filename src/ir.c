@@ -90,10 +90,22 @@ static void ir_operand_number(struct ir_instruction *instruction, int position, 
   instruction->operands[position].data.number = number->data.number.value;
 }
 
+static void ir_operand_identifier(struct ir_instruction *instruction, int position, struct node *identifier) {
+  instruction->operands[position].kind = OPERAND_IDENTIFIER;
+  strncpy(instruction->operands[position].data.identifier_name, identifier->data.identifier.name, 
+          MAX_IDENTIFIER_LENGTH);
+}
+
 static void ir_operand_temporary(struct ir_instruction *instruction, int position) {
   static int next_temporary;
   instruction->operands[position].kind = OPERAND_TEMPORARY;
   instruction->operands[position].data.temporary = next_temporary++;
+}
+
+static void ir_operand_generated_label(struct ir_instruction *instruction, int position) {
+    static int next_label;
+    instruction->operands[position].kind = OPERAND_BRANCH_LABEL;
+    instruction->operands[position].data.temporary = next_label++;
 }
 
 static void ir_operand_copy(struct ir_instruction *instruction, int position, struct ir_operand *operand) {
@@ -114,13 +126,20 @@ void ir_generate_for_number(struct node *number) {
   number->ir = ir_section(instruction, instruction);
 
   number->data.number.result.ir_operand = &instruction->operands[0];
+  number->data.number.result.ir_operand->lvalue = false;
 }
 
 void ir_generate_for_identifier(struct node *identifier) {
   struct ir_instruction *instruction;
   assert(NODE_IDENTIFIER == identifier->kind);
-  instruction = ir_instruction(IR_NO_OPERATION);
+  /* load the address as an lvalue */
+  instruction = ir_instruction(IR_ADDRESS_OF);
+  ir_operand_temporary(instruction, 0);
+  ir_operand_identifier(instruction, 1, identifier);
+
   identifier->ir = ir_section(instruction, instruction);
+  identifier->data.identifier.symbol->result.ir_operand = &instruction->operands[0];
+  identifier->data.identifier.symbol->result.ir_operand->lvalue = true;
   assert(NULL != identifier->data.identifier.symbol->result.ir_operand);
 }
 
@@ -189,6 +208,10 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
       ir_generate_for_arithmetic_binary_operation(IR_SUBTRACT, binary_operation);
       break;
 
+    case BINOP_REMAINDER:
+      ir_generate_for_arithmetic_binary_operation(IR_REMAINDER, binary_operation);
+      break;
+
     case BINOP_ASSIGN:
       ir_generate_for_simple_assignment(binary_operation);
       break;
@@ -200,8 +223,6 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
 }
 
 void ir_generate_for_compound_statement(struct node *compound_statement) {
-    /* Nothing to do with the function_def_specifier since it is not an expression. 
-     * We only care about the compound_statement */
   struct node *declaration_or_statement_list = 
       compound_statement->data.compound_statement.declaration_or_statement_list;
   
@@ -233,6 +254,21 @@ void ir_generate_for_while_statement(struct node *while_statement) {
   /* xxx: Need to fix this.. This is just a template */
   while_statement->ir = ir_copy(while_statement->data.statement.expression->ir);
   ir_append(while_statement->ir, instruction);
+}
+
+void ir_generate_for_expr(struct node *expr) {
+    struct node *expr1 = expr->data.expr.expr1;
+    struct node *expr2 = expr->data.expr.expr2;
+    switch(expr->data.expr.type_of_expr) {
+      case ASSIGNMENT_EXPR:
+        assert(expr1 == NULL);
+        ir_generate_for_expression(expr2);
+        expr->ir = expr2->ir;
+        break;
+      default:
+        assert(0);
+        break;
+    }
 }
 
 void ir_generate_for_expression_statement(struct node *expression_statement) {
