@@ -307,7 +307,6 @@ assignment_expr
 
 comma_expr
   : assignment_expr
-      { $$ = node_expr(NULL, $1, ASSIGNMENT_EXPR); }
   | expr COMMA assignment_expr
   { $$ = node_comma_expr($1, $3); }
 ;

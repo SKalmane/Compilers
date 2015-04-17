@@ -102,11 +102,11 @@ static void ir_operand_temporary(struct ir_instruction *instruction, int positio
   instruction->operands[position].data.temporary = next_temporary++;
 }
 
-static void ir_operand_generated_label(struct ir_instruction *instruction, int position) {
-    static int next_label;
-    instruction->operands[position].kind = OPERAND_BRANCH_LABEL;
-    instruction->operands[position].data.temporary = next_label++;
-}
+/* static void ir_operand_generated_label(struct ir_instruction *instruction, int position) { */
+/*     static int next_label; */
+/*     instruction->operands[position].kind = OPERAND_BRANCH_LABEL; */
+/*     instruction->operands[position].data.temporary = next_label++; */
+/* } */
 
 static void ir_operand_copy(struct ir_instruction *instruction, int position, struct ir_operand *operand) {
   instruction->operands[position] = *operand;
@@ -180,6 +180,7 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
   } else {
     ir_operand_copy(instruction, 0, left->data.identifier.symbol->result.ir_operand);
   }
+  printf("Hello\n");
   ir_operand_copy(instruction, 1, node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
 
   binary_operation->ir = ir_copy(binary_operation->data.binary_operation.right_operand->ir);
@@ -284,6 +285,19 @@ void ir_generate_for_expression_statement(struct node *expression_statement) {
   ir_append(expression_statement->ir, instruction);
 }
 
+void ir_generate_for_return_statement(struct node *return_statement) {
+  struct ir_instruction *instruction;
+  /* struct node *expression = return_statement->data.statement.expression; */
+  assert(NODE_STATEMENT == return_statement->kind);
+  /* ir_generate_for_expression(expression); */
+
+  instruction = ir_instruction(IR_NO_OPERATION);
+  /* ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand); */
+
+  /* return_statement->ir = ir_copy(return_statement->data.statement.expression->ir); */
+  return_statement->ir = ir_append(return_statement->ir, instruction);
+}
+
 void ir_generate_for_statement(struct node *statement) {
 
   assert(NODE_STATEMENT == statement->kind);
@@ -294,7 +308,12 @@ void ir_generate_for_statement(struct node *statement) {
     case WHILE_STATEMENT_TYPE:
       ir_generate_for_while_statement(statement);
       break;
+    case RETURN_STATEMENT_TYPE:
+      ir_generate_for_return_statement(statement);
+      break;
     default:
+      printf("Type of statement: %d\n", 
+	     statement->data.statement.type_of_statement);
       assert(0);
       break;
   }
@@ -307,16 +326,20 @@ void ir_generate_for_statement_list(struct node *statement_list) {
   assert(NODE_STATEMENT_LIST == statement_list->kind);
   
   if (NULL != init) {
-    ir_generate_for_statement_list(init);
-    ir_generate_for_expression_statement(statement);
+    printf("Init: Kind of node: %d\n", init->kind);
+    printf("Statement : Kind of node: %d\n", statement->kind);
+    ir_generate_for_expression(init);
+    ir_generate_for_expression(statement);
     statement_list->ir = ir_concatenate(init->ir, statement->ir);
   } else {
-    ir_generate_for_expression_statement(statement);
+    printf("Statement only: Kind of node: %d\n", statement->kind);
+    ir_generate_for_expression(statement);
     statement_list->ir = statement->ir;
   }
 }
 
 void ir_generate_for_expression(struct node *expression) {
+  printf("Kind of node: %d\n", expression->kind);
   switch (expression->kind) {
     case NODE_IDENTIFIER:
       ir_generate_for_identifier(expression);
@@ -331,6 +354,8 @@ void ir_generate_for_expression(struct node *expression) {
       break;
 
     case NODE_DECL:
+      expression->ir = ir_section(ir_instruction(IR_NO_OPERATION),
+				  ir_instruction(IR_NO_OPERATION));
       /* nothing to do for declarations */
       break;
     case NODE_FUNCTION_DEFINITION:
@@ -341,6 +366,13 @@ void ir_generate_for_expression(struct node *expression) {
       break;
     case NODE_STATEMENT:
       ir_generate_for_statement(expression);
+      break;
+    case NODE_STATEMENT_LIST:
+      ir_generate_for_statement_list(expression);
+      break;
+    case NODE_EXPR:
+      ir_generate_for_expr(expression);
+      break;
     default:
       assert(0);
       break;

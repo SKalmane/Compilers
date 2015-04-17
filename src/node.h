@@ -177,33 +177,33 @@ struct node {
       struct node *function_def_specifier;
       struct node *compound_statement;
     } function_definition;
-      struct {
-          struct node *unary_casting_expr;
-          struct node *cast_expr;
-          struct result result;
-      } cast_expr;
-      struct {
-          struct node *postfix_expr;
+    struct {
+      struct node *unary_casting_expr;
+      struct node *cast_expr;
+      struct result result;
+    } cast_expr;
+    struct {
+      struct node *postfix_expr;
           struct node *expression_list;
-          struct result result;
-      } function_call;
-      struct {
-          struct node *expression_list;
-	  struct node *assignment_expr;
-      } expression_list;
-      struct {
-          struct node *postfix_expr;
-	  struct node *expr;
-	struct result result;
-      } subscript_expr;
-      struct {
+      struct result result;
+    } function_call;
+    struct {
+      struct node *expression_list;
+      struct node *assignment_expr;
+    } expression_list;
+    struct {
+      struct node *postfix_expr;
+      struct node *expr;
+      struct result result;
+    } subscript_expr;
+    struct {
           struct node *expr;
-	  struct node *assignment_expr;
-      } comma_expr;
-      struct {
-	struct node *initialized_decl_list;
-	struct node *initialized_decl;
-      } initialized_decl_list;
+      struct node *assignment_expr;
+    } comma_expr;
+    struct {
+      struct node *initialized_decl_list;
+      struct node *initialized_decl;
+    } initialized_decl_list;
   } data;
 };
 

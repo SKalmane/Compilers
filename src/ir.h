@@ -48,7 +48,7 @@ struct ir_section {
   struct ir_instruction *first, *last;
 };
 
-void ir_generate_for_statement_list(struct node *statement_list);
+void ir_generate_for_translation_unit(struct node *translation_unit);
 
 void ir_print_section(FILE *output, struct ir_section *section);
 
