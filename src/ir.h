@@ -37,6 +37,19 @@ struct ir_operand {
 #define IR_FUNCTION_CALL          12
 #define IR_ADDRESS_OF             13
 #define IR_LOAD_WORD              14
+#define IR_LESS_THAN              15
+#define IR_LESS_THAN_OR_EQ_TO     16
+#define IR_GREATER_THAN           17
+#define IR_GREATER_THAN_OR_EQ_TO  18
+#define IR_SHIFT_LEFT             19
+#define IR_SHIFT_RIGHT            20
+#define IR_EQUAL_TO               21
+#define IR_NOT_EQUAL_TO           22
+#define IR_BITWISE_OR             23
+#define IR_BITWISE_XOR            24
+#define IR_BITWISE_AND            25
+#define IR_BIFEQZ                 26
+#define IR_BIFNOTEQZ              27
 
 struct ir_instruction {
   int kind;
@@ -48,7 +61,7 @@ struct ir_section {
   struct ir_instruction *first, *last;
 };
 
-void ir_generate_for_translation_unit(struct node *translation_unit);
+void ir_generate_for_program(struct node *program);
 
 void ir_print_section(FILE *output, struct ir_section *section);
 

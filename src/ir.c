@@ -92,7 +92,7 @@ static void ir_operand_number(struct ir_instruction *instruction, int position, 
 
 static void ir_operand_identifier(struct ir_instruction *instruction, int position, struct node *identifier) {
   instruction->operands[position].kind = OPERAND_IDENTIFIER;
-  strncpy(instruction->operands[position].data.identifier_name, identifier->data.identifier.name, 
+  strncpy(instruction->operands[position].data.identifier_name, identifier->data.identifier.name,
           MAX_IDENTIFIER_LENGTH);
 }
 
@@ -102,11 +102,11 @@ static void ir_operand_temporary(struct ir_instruction *instruction, int positio
   instruction->operands[position].data.temporary = next_temporary++;
 }
 
-/* static void ir_operand_generated_label(struct ir_instruction *instruction, int position) { */
-/*     static int next_label; */
-/*     instruction->operands[position].kind = OPERAND_BRANCH_LABEL; */
-/*     instruction->operands[position].data.temporary = next_label++; */
-/* } */
+static void ir_operand_generated_label(struct ir_instruction *instruction, int position) {
+    static int next_label;
+    instruction->operands[position].kind = OPERAND_BRANCH_LABEL;
+    instruction->operands[position].data.temporary = next_label++;
+}
 
 static void ir_operand_copy(struct ir_instruction *instruction, int position, struct ir_operand *operand) {
   instruction->operands[position] = *operand;
@@ -145,8 +145,20 @@ void ir_generate_for_identifier(struct node *identifier) {
 
 void ir_generate_for_expression(struct node *expression);
 
+void ir_generate_for_conversion_to_rvalue(int kind, struct node *lvalue_node) {
+    struct ir_instruction *instruction;
+    assert(node_get_result(lvalue_node)->ir_operand->lvalue);
+    instruction = ir_instruction(kind);
+    ir_operand_temporary(instruction, 0);
+    ir_operand_copy(instruction, 1,
+                    node_get_result(lvalue_node)->ir_operand);
+    lvalue_node->ir = ir_append(lvalue_node->ir, instruction);
+    node_get_result(lvalue_node)->ir_operand = &instruction->operands[0];
+    node_get_result(lvalue_node)->ir_operand->lvalue = false;
+}
+
 void ir_generate_for_arithmetic_binary_operation(int kind, struct node *binary_operation) {
-  struct ir_instruction *instruction;
+    struct ir_instruction *instruction;
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
 
   ir_generate_for_expression(binary_operation->data.binary_operation.left_operand);
@@ -154,13 +166,27 @@ void ir_generate_for_arithmetic_binary_operation(int kind, struct node *binary_o
 
   instruction = ir_instruction(kind);
   ir_operand_temporary(instruction, 0);
-  ir_operand_copy(instruction, 1, node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand);
-  ir_operand_copy(instruction, 2, node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
+  /* binary operations need both operands to be rvalues. */
 
+  if(node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand->lvalue) {
+      ir_generate_for_conversion_to_rvalue(IR_LOAD_WORD,
+                                           binary_operation->data.binary_operation.left_operand);
+  }
+
+  if(node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand->lvalue) {
+      ir_generate_for_conversion_to_rvalue(IR_LOAD_WORD,
+                                           binary_operation->data.binary_operation.right_operand);
+  }
+
+  ir_operand_copy(instruction, 1,
+                  node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand);
+  ir_operand_copy(instruction, 2,
+                  node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
   binary_operation->ir = ir_concatenate(binary_operation->data.binary_operation.left_operand->ir,
                                         binary_operation->data.binary_operation.right_operand->ir);
   ir_append(binary_operation->ir, instruction);
   binary_operation->data.binary_operation.result.ir_operand = &instruction->operands[0];
+  binary_operation->data.binary_operation.result.ir_operand->lvalue = false;
 }
 
 void ir_generate_for_simple_assignment(struct node *binary_operation) {
@@ -168,25 +194,110 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
   struct node *left;
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
 
-  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand);
-
   left = binary_operation->data.binary_operation.left_operand;
+  ir_generate_for_expression(left);
+  assert(NULL != node_get_result(left)->ir_operand);
+
+  if(!node_get_result(left)->ir_operand->lvalue) {
+      ir_generation_num_errors++;
+      printf("ERROR: The left hand side of assignment operation is not an lvalue\n");
+  }
   assert(NODE_IDENTIFIER == left->kind);
 
-  instruction = ir_instruction(IR_COPY);
-  if (NULL == left->data.identifier.symbol->result.ir_operand) {
-    ir_operand_temporary(instruction, 0);
-    left->data.identifier.symbol->result.ir_operand = &instruction->operands[0];
-  } else {
-    ir_operand_copy(instruction, 0, left->data.identifier.symbol->result.ir_operand);
-  }
-  printf("Hello\n");
-  ir_operand_copy(instruction, 1, node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
+  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand);
 
-  binary_operation->ir = ir_copy(binary_operation->data.binary_operation.right_operand->ir);
+  instruction = ir_instruction(IR_COPY);
+
+  ir_operand_copy(instruction, 0, 
+                  node_get_result(left)->ir_operand);
+  
+  ir_operand_copy(instruction, 1, 
+                  node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
+
+  binary_operation->ir = ir_concatenate(left->ir, 
+                                        binary_operation->data.binary_operation.right_operand->ir);
   ir_append(binary_operation->ir, instruction);
 
   binary_operation->data.binary_operation.result.ir_operand = &instruction->operands[0];
+  binary_operation->data.binary_operation.result.ir_operand->lvalue = true;
+}
+
+void ir_generate_for_binary_operation(struct node *binary_operation);
+
+void ir_generate_for_compound_assignment(int kind, struct node *binary_operation) {
+  struct ir_instruction *instruction;
+  struct node *left;
+  assert(NODE_BINARY_OPERATION == binary_operation->kind);
+
+  left = binary_operation->data.binary_operation.left_operand;
+
+  binary_operation->data.binary_operation.operation = kind;
+  ir_generate_for_binary_operation(binary_operation);
+
+  ir_generate_for_expression(left);
+  assert(NODE_IDENTIFIER == left->kind);
+  assert(NULL != node_get_result(left)->ir_operand);
+  if(!node_get_result(left)->ir_operand->lvalue) {
+      ir_generation_num_errors++;
+      printf("ERROR: The left hand side of assignment operation is not an lvalue\n");
+  }
+  binary_operation->ir = ir_concatenate(binary_operation->ir, left->ir);
+
+  instruction = ir_instruction(IR_COPY);
+
+  ir_operand_copy(instruction, 0, 
+                  node_get_result(left)->ir_operand);
+  
+  ir_operand_copy(instruction, 1, 
+                  node_get_result(binary_operation)->ir_operand);
+
+  ir_append(binary_operation->ir, instruction);
+
+  binary_operation->data.binary_operation.result.ir_operand = &instruction->operands[0];
+  binary_operation->data.binary_operation.result.ir_operand->lvalue = true;
+}
+
+void ir_generate_for_logical_binary_operation(int kind, struct node *binary_operation) {
+    struct ir_instruction *instruction, branch_instruction;
+    assert(NODE_BINARY_OPERATION == binary_operation->kind);
+
+    ir_generate_for_expression(binary_operation->data.binary_operation.left_operand);
+
+    assert((kind == BINOP_LOGICAL_OR_EXPR) || (kind == BINOP_LOGICAL_AND_EXPR));
+    if(kind == BINOP_LOGICAL_OR_EXPR) {
+        branch_instruction = ir_instruction(IR_BIFNOTEQZ);
+    } else {
+        branch_instruction = ir_instruction(IR_BIFEQZ);
+    }
+    ir_operand_temporary(branch_instruction, 0);
+    ir_operand_generated_label(branch_instruction, 1);
+
+    ir_generate_for_expression(binary_operation->data.binary_operation.right_operand);
+
+    instruction = ir_instruction(kind);
+    ir_operand_temporary(instruction, 0);
+    /* binary operations need both operands to be rvalues. */
+
+    if(node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(IR_LOAD_WORD,
+                                             binary_operation->data.binary_operation.left_operand);
+    }
+
+    if(node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(IR_LOAD_WORD,
+                                             binary_operation->data.binary_operation.right_operand);
+    }
+
+    ir_operand_copy(instruction, 1,
+                    node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand);
+    ir_operand_copy(instruction, 2,
+                    node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
+    /* xxx: Need to copy the instructions correctly to have the conditional branching.. */    
+    binary_operation->ir = ir_concatenate(binary_operation->data.binary_operation.left_operand->ir,
+                                          binary_operation->data.binary_operation.right_operand->ir);
+    ir_append(binary_operation->ir, instruction);
+    binary_operation->data.binary_operation.result.ir_operand = &instruction->operands[0];
+    binary_operation->data.binary_operation.result.ir_operand->lvalue = false;
 }
 
 void ir_generate_for_binary_operation(struct node *binary_operation) {
@@ -217,6 +328,70 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
       ir_generate_for_simple_assignment(binary_operation);
       break;
 
+    case BINOP_ASSIGN_PLUS_EQUAL:
+      ir_generate_for_compound_assignment(BINOP_ADDITION, binary_operation);
+      break;
+
+    case BINOP_ASSIGN_MINUS_EQUAL:
+      ir_generate_for_compound_assignment(BINOP_SUBTRACTION, binary_operation);
+      break;
+
+    case BINOP_ASSIGN_ASTERISK_EQUAL:
+      ir_generate_for_compound_assignment(BINOP_MULTIPLICATION, binary_operation);
+      break;
+
+    case BINOP_ASSIGN_SLASH_EQUAL:
+      ir_generate_for_compound_assignment(BINOP_DIVISION, binary_operation);
+      break;
+
+    case BINOP_ASSIGN_PERCENT_EQUAL:
+      ir_generate_for_compound_assignment(BINOP_REMAINDER, binary_operation);
+      break;
+
+    case BINOP_LESS_THAN:
+        ir_generate_for_arithmetic_binary_operation(IR_LESS_THAN, binary_operation);
+        break;
+
+    case BINOP_LESS_THAN_OR_EQUAL_TO:
+        ir_generate_for_arithmetic_binary_operation(IR_LESS_THAN_OR_EQ_TO, binary_operation);
+        break;
+
+    case BINOP_GREATER_THAN:
+        ir_generate_for_arithmetic_binary_operation(IR_GREATER_THAN, binary_operation);
+        break;
+
+    case BINOP_GREATER_THAN_OR_EQUAL_TO:
+        ir_generate_for_arithmetic_binary_operation(IR_GREATER_THAN_OR_EQ_TO, binary_operation);
+        break;
+
+    case BINOP_SHIFT_LEFT:
+        ir_generate_for_arithmetic_binary_operation(IR_SHIFT_LEFT, binary_operation);
+        break;
+
+    case BINOP_SHIFT_RIGHT:
+        ir_generate_for_arithmetic_binary_operation(IR_SHIFT_RIGHT, binary_operation);
+        break;
+
+    case BINOP_IS_EQUAL_TO:
+        ir_generate_for_arithmetic_binary_operation(IR_EQUAL_TO, binary_operation);
+        break;
+
+    case BINOP_NOT_EQUAL_TO:
+        ir_generate_for_arithmetic_binary_operation(IR_NOT_EQUAL_TO, binary_operation);
+        break;
+
+    case BINOP_BITWISE_OR_EXPR:
+        ir_generate_for_arithmetic_binary_operation(IR_BITWISE_OR, binary_operation);
+        break;
+
+    case BINOP_BITWISE_XOR_EXPR:
+        ir_generate_for_arithmetic_binary_operation(IR_BITWISE_XOR, binary_operation);
+        break;
+
+    case BINOP_BITWISE_AND_EXPR:
+        ir_generate_for_arithmetic_binary_operation(IR_BITWISE_AND, binary_operation);
+        break;
+
     default:
       assert(0);
       break;
@@ -224,9 +399,9 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
 }
 
 void ir_generate_for_compound_statement(struct node *compound_statement) {
-  struct node *declaration_or_statement_list = 
+  struct node *declaration_or_statement_list =
       compound_statement->data.compound_statement.declaration_or_statement_list;
-  
+
   assert(NODE_COMPOUND_STATEMENT == compound_statement->kind);
   if(declaration_or_statement_list != NULL) {
       ir_generate_for_expression(declaration_or_statement_list);
@@ -235,10 +410,10 @@ void ir_generate_for_compound_statement(struct node *compound_statement) {
 }
 
 void ir_generate_for_function_definition(struct node *function_definition) {
-    /* Nothing to do with the function_def_specifier since it is not an expression. 
+    /* Nothing to do with the function_def_specifier since it is not an expression.
      * We only care about the compound_statement */
   struct node *compound_statement = function_definition->data.function_definition.compound_statement;
-  
+
   assert(NODE_FUNCTION_DEFINITION == function_definition->kind);
 
   ir_generate_for_expression(compound_statement);
@@ -294,7 +469,6 @@ void ir_generate_for_return_statement(struct node *return_statement) {
   instruction = ir_instruction(IR_NO_OPERATION);
   /* ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand); */
 
-  /* return_statement->ir = ir_copy(return_statement->data.statement.expression->ir); */
   return_statement->ir = ir_append(return_statement->ir, instruction);
 }
 
@@ -312,7 +486,7 @@ void ir_generate_for_statement(struct node *statement) {
       ir_generate_for_return_statement(statement);
       break;
     default:
-      printf("Type of statement: %d\n", 
+      printf("Type of statement: %d\n",
 	     statement->data.statement.type_of_statement);
       assert(0);
       break;
@@ -324,22 +498,20 @@ void ir_generate_for_statement_list(struct node *statement_list) {
   struct node *statement = statement_list->data.statement_list.statement;
 
   assert(NODE_STATEMENT_LIST == statement_list->kind);
-  
+
   if (NULL != init) {
-    printf("Init: Kind of node: %d\n", init->kind);
-    printf("Statement : Kind of node: %d\n", statement->kind);
     ir_generate_for_expression(init);
     ir_generate_for_expression(statement);
     statement_list->ir = ir_concatenate(init->ir, statement->ir);
   } else {
-    printf("Statement only: Kind of node: %d\n", statement->kind);
     ir_generate_for_expression(statement);
     statement_list->ir = statement->ir;
   }
 }
 
 void ir_generate_for_expression(struct node *expression) {
-  printf("Kind of node: %d\n", expression->kind);
+  /* xxx: printf("Kind of node: %d\n", expression->kind); */
+    struct ir_instruction *no_op_instruction;
   switch (expression->kind) {
     case NODE_IDENTIFIER:
       ir_generate_for_identifier(expression);
@@ -354,8 +526,9 @@ void ir_generate_for_expression(struct node *expression) {
       break;
 
     case NODE_DECL:
-      expression->ir = ir_section(ir_instruction(IR_NO_OPERATION),
-				  ir_instruction(IR_NO_OPERATION));
+      no_op_instruction = ir_instruction(IR_NO_OPERATION);
+      expression->ir = ir_section(no_op_instruction,
+				  no_op_instruction);
       /* nothing to do for declarations */
       break;
     case NODE_FUNCTION_DEFINITION:
@@ -384,15 +557,27 @@ void ir_generate_for_translation_unit(struct node *translation_unit) {
   struct node *translation_unit_within = translation_unit->data.translation_unit.translation_unit;
 
   assert(NODE_TRANSLATION_UNIT == translation_unit->kind);
-
   if (NULL != translation_unit_within) {
+      printf("Translation Unit kind: %d\n", translation_unit_within->kind);
     ir_generate_for_translation_unit(translation_unit_within);
+    printf("Top level decl kind: %d\n", top_level_decl == NULL);
     ir_generate_for_expression(top_level_decl);
     translation_unit->ir = ir_concatenate(translation_unit_within->ir, top_level_decl->ir);
   } else {
     ir_generate_for_expression(top_level_decl);
     translation_unit->ir = top_level_decl->ir;
   }
+}
+
+void ir_generate_for_program(struct node *program) {
+    struct node *top_level_decl = program->data.translation_unit.top_level_decl;
+    struct node *translation_unit_within = program->data.translation_unit.translation_unit;
+
+    assert(NODE_TRANSLATION_UNIT == program->kind);
+    assert(top_level_decl == NULL);
+    assert(translation_unit_within != NULL);
+    ir_generate_for_translation_unit(translation_unit_within);
+    program->ir = translation_unit_within->ir;
 }
 
 /**********************
@@ -407,13 +592,30 @@ static void ir_print_opcode(FILE *output, int kind) {
     "DIV",
     "ADD",
     "SUB",
+    "REM",
     "LI",
     "COPY",
     "PNUM",
+    "GLBL",
+    "GOTO",
+    "FCNCLL",
+    "ADDRESSOF",
+    "LOADWORD",
+    "LESSTHAN",
+    "LTOREQTO",
+    "GRTHAN",
+    "GTOREQTO",
+    "SHIFLEFT",
+    "SHIFRIGHT",
+    "EQTO",
+    "NOTEQTO",
+    "BITOR",
+    "BITXOR",
+    "BITAND",
     NULL
   };
 
-  fprintf(output, "%-8s", instruction_names[kind]);
+  fprintf(output, "%-10s", instruction_names[kind]);
 }
 
 static void ir_print_operand(FILE *output, struct ir_operand *operand) {
@@ -425,8 +627,16 @@ static void ir_print_operand(FILE *output, struct ir_operand *operand) {
     case OPERAND_TEMPORARY:
       fprintf(output, "     t%04d", operand->data.temporary);
       break;
+    case OPERAND_IDENTIFIER:
+      fprintf(output, "     %5s", operand->data.identifier_name);
+      break;
+    default:
+      fprintf(output, "Unknown operand type found: %d\n", operand->kind);
+      assert(0);
+      break;
   }
 }
+
 void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
   ir_print_opcode(output, instruction->kind);
 
@@ -435,6 +645,17 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_DIVIDE:
     case IR_ADD:
     case IR_SUBTRACT:
+    case IR_LESS_THAN:
+    case IR_LESS_THAN_OR_EQ_TO:
+    case IR_GREATER_THAN:
+    case IR_GREATER_THAN_OR_EQ_TO:
+    case IR_SHIFT_LEFT:
+    case IR_SHIFT_RIGHT:
+    case IR_EQUAL_TO:
+    case IR_NOT_EQUAL_TO:
+    case IR_BITWISE_OR:
+    case IR_BITWISE_XOR:
+    case IR_BITWISE_AND:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[1]);
@@ -443,6 +664,8 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
       break;
     case IR_LOAD_IMMEDIATE:
     case IR_COPY:
+    case IR_ADDRESS_OF:
+    case IR_LOAD_WORD:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[1]);
@@ -453,6 +676,7 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_NO_OPERATION:
       break;
     default:
+      printf("Unknown instruction found: %d\n", instruction->kind);
       assert(0);
       break;
   }
@@ -466,7 +690,6 @@ void ir_print_section(FILE *output, struct ir_section *section) {
     fprintf(output, "%5d     ", i++);
     ir_print_instruction(output, iter);
     fprintf(output, "\n");
-
     iter = iter->next;
   }
 }
