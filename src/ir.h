@@ -50,6 +50,20 @@ struct ir_operand {
 #define IR_BITWISE_AND            25
 #define IR_BIFEQZ                 26
 #define IR_BIFNOTEQZ              27
+#define IR_STORE_WORD             28
+#define IR_PREFIX_INC             29
+#define IR_POSTFIX_INC            30
+#define IR_SIZEOF                 31
+#define IR_BITWISE_NOT            32
+#define IR_LOGICAL_NOT            33
+#define IR_NEGATION               34
+#define IR_UNARY_PLUS             35
+#define IR_ADDRESS_OF             36
+#define IR_INDIRECTION            37
+#define IR_CASTING                38
+#define IR_POSTFIX_DEC            39
+#define IR_PREFIX_DEC             40
+
 
 struct ir_instruction {
   int kind;
