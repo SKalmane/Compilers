@@ -175,7 +175,8 @@ primary_expr
 
 subscript_expr
   : postfix_expr LEFT_SQUARE expr RIGHT_SQUARE
-      { $$ = node_subscript_expr($1, $3); }
+      { $$ = node_unary_operation(UNARYOP_INDIRECTION,
+                                  node_binary_operation($1, BINOP_ADDITION, $3));}
 ;
 
 expression_list

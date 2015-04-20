@@ -421,6 +421,8 @@ struct result *node_get_result(struct node *expression) {
       return &expression->data.identifier.symbol->result;
     case NODE_BINARY_OPERATION:
       return &expression->data.binary_operation.result;
+    case NODE_TERNARY_OPERATION:
+      return &expression->data.ternary_operation.result;
     case NODE_UNARY_OPERATION:
       return &expression->data.unary_operation.result;
     case NODE_CAST_EXPR:

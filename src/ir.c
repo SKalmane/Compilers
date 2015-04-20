@@ -10,11 +10,11 @@
 
 int ir_generation_num_errors;
 /* xxx: Things to do:
- * Logical binary operations
  * Casting
  * Subscript Exprs
  * Function call parameters
- * ternary_operations
+ * Question - for *(p + i), should p+i be an lvalue ?
+ * That is, should the operand of indirection be an lvalue?
  */
 
 /************************
@@ -254,7 +254,6 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
       ir_generation_num_errors++;
       printf("ERROR: The left hand side of assignment operation is not an lvalue\n");
   }
-  assert(NODE_IDENTIFIER == left->kind);
 
   ir_generate_for_expression(binary_operation->data.binary_operation.right_operand);
 
@@ -313,50 +312,190 @@ void ir_generate_for_compound_assignment(int kind, struct node *binary_operation
   binary_operation->data.binary_operation.result.ir_operand->lvalue = true;
 }
 
-/* void ir_generate_for_logical_binary_operation(int kind, struct node *binary_operation) { */
-/*   struct ir_instruction *instruction1, instruction2, instruction3,  */
-/*     branch_instruction; */
-/*     assert(NODE_BINARY_OPERATION == binary_operation->kind); */
+void ir_generate_for_ternary_operation(struct node *ternary_operation) {
+    struct ir_instruction *storeword_instruction1, *storeword_instruction2;
+    struct ir_instruction *label_instruction1, *label_instruction2;
+    struct ir_instruction *gotoIf_instruction1, *goto_instruction;
 
-/*     ir_generate_for_expression(binary_operation->data.binary_operation.left_operand); */
-/*     if(node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand->lvalue) { */
-/*         ir_generate_for_conversion_to_rvalue(IR_LOAD_WORD, */
-/*                                              binary_operation->data.binary_operation.left_operand); */
-/*     } */
+    struct node *first_operand = ternary_operation->data.ternary_operation.first_operand;
+    struct node *second_operand = ternary_operation->data.ternary_operation.second_operand;
+    struct node *third_operand = ternary_operation->data.ternary_operation.third_operand;
 
-/*     assert((kind == BINOP_LOGICAL_OR_EXPR) || (kind == BINOP_LOGICAL_AND_EXPR)); */
-/*     if(kind == BINOP_LOGICAL_OR_EXPR) { */
-/*         branch_instruction = ir_instruction(IR_BIFNOTEQZ); */
-/*     } else { */
-/*         branch_instruction = ir_instruction(IR_BIFEQZ); */
-/*     } */
-/*     ir_operand_temporary(branch_instruction, 0); */
-/*     ir_operand_copy(branch_instruction, 0,  */
-/* 		    node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand); */
-/*     ir_operand_generated_label(branch_instruction, 1); */
+    assert(NODE_TERNARY_OPERATION == ternary_operation->kind);
 
-/*     ir_generate_for_expression(binary_operation->data.binary_operation.right_operand); */
-/*     if(node_get_result(binary_operation->data.binary_operation.left_operand)->ir_operand->lvalue) { */
-/*         ir_generate_for_conversion_to_rvalue(IR_LOAD_WORD, */
-/*                                              binary_operation->data.binary_operation.right_operand); */
-/*     } */
+    ir_generate_for_expression(first_operand);
+    if(node_get_result(first_operand)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(first_operand);
+    }
 
-/*     instruction1 = ir_instruction(IR_STOREWORD); */
-/*     ir_operand_temporary(instruction1, 0); */
-/*     ir_operand_copy(instruction1, 0,  */
-/* 		    node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand); */
-/*     instruction2 = ir_instruction(IR_GOTO); */
-/*     ir_operand_generated_label(instruction2, 0); */
+    label_instruction1 = ir_instruction(IR_GENERATED_LABEL);
+    ir_generate_label(label_instruction1);
 
-/*     ir_generate_label(branch_instruction); */
+    label_instruction2 = ir_instruction(IR_GENERATED_LABEL);
+    ir_generate_label(label_instruction2);
 
-/*     /\* xxx: Need to copy the instructions correctly to have the conditional branching.. *\/     */
-/*     binary_operation->ir = ir_concatenate(binary_operation->data.binary_operation.left_operand->ir, */
-/*                                           binary_operation->data.binary_operation.right_operand->ir); */
-/*     ir_append(binary_operation->ir, instruction); */
-/*     binary_operation->data.binary_operation.result.ir_operand = &instruction->operands[0]; */
-/*     binary_operation->data.binary_operation.result.ir_operand->lvalue = false; */
-/* } */
+    gotoIf_instruction1 = ir_instruction(IR_GOTO_IF_FALSE);
+    ir_generate_gotoFalseOrTrue(gotoIf_instruction1, node_get_result(first_operand)->ir_operand, label_instruction1);
+
+    ir_generate_for_expression(second_operand);
+    if(node_get_result(second_operand)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(second_operand);
+    }
+
+    storeword_instruction1 = ir_instruction(IR_STORE_WORD);
+    ir_operand_temporary(storeword_instruction1, 0);
+    ir_operand_copy(storeword_instruction1, 1,
+                    node_get_result(second_operand)->ir_operand);
+
+    goto_instruction = ir_instruction(IR_GOTO);
+    ir_generate_goto(goto_instruction, label_instruction2);
+
+    ir_generate_for_expression(third_operand);
+    if(node_get_result(third_operand)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(third_operand);
+    }
+
+    storeword_instruction2 = ir_instruction(IR_STORE_WORD);
+    ir_operand_copy(storeword_instruction2, 0,
+                    &storeword_instruction1->operands[0]);
+    ir_operand_copy(storeword_instruction2, 1,
+                    node_get_result(third_operand)->ir_operand);
+
+    /* Create the IR by adding up all the instructions */
+    ternary_operation->ir = ir_copy(first_operand->ir);
+    ir_append(ternary_operation->ir, gotoIf_instruction1);
+    ternary_operation->ir = ir_concatenate(ternary_operation->ir, second_operand->ir);
+    ir_append(ternary_operation->ir, storeword_instruction1);
+    ir_append(ternary_operation->ir, goto_instruction);
+    ir_append(ternary_operation->ir, label_instruction1);
+    ternary_operation->ir = ir_concatenate(ternary_operation->ir, third_operand->ir);
+    ir_append(ternary_operation->ir, storeword_instruction2);
+    ir_append(ternary_operation->ir, label_instruction2);
+
+    ternary_operation->data.ternary_operation.result.ir_operand = &storeword_instruction2->operands[0];
+    ternary_operation->data.ternary_operation.result.ir_operand->lvalue = false;
+}
+
+void ir_generate_for_logical_binary_operation(int kind, struct node *binary_operation) {
+    struct ir_instruction *storeword_instruction1, *storeword_instruction2;
+    struct ir_instruction *label_instruction1, *label_instruction2;
+    struct ir_instruction *gotoIf_instruction1, *gotoIf_instruction2, *goto_instruction;
+    struct ir_instruction *constant_instruction1, *constant_instruction2;
+
+    struct node *left = binary_operation->data.binary_operation.left_operand;
+    struct node *right = binary_operation->data.binary_operation.right_operand;
+
+    assert(NODE_BINARY_OPERATION == binary_operation->kind);
+    printf("Kind is %d\n", kind);
+
+    assert((kind == BINOP_LOGICAL_OR_EXPR) || (kind == BINOP_LOGICAL_AND_EXPR));
+
+    ir_generate_for_expression(left);
+    if(node_get_result(left)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(left);
+    }
+
+    label_instruction1 = ir_instruction(IR_GENERATED_LABEL);
+    ir_generate_label(label_instruction1);
+
+    label_instruction2 = ir_instruction(IR_GENERATED_LABEL);
+    ir_generate_label(label_instruction2);
+
+    ir_generate_for_expression(right);
+    if(node_get_result(right)->ir_operand->lvalue) {
+        ir_generate_for_conversion_to_rvalue(right);
+    }
+
+    constant_instruction1 = ir_instruction(IR_LOAD_IMMEDIATE);
+    constant_instruction2 = ir_instruction(IR_LOAD_IMMEDIATE);
+
+    switch (kind) {
+      case BINOP_LOGICAL_OR_EXPR:
+        /* For the OR Expr, we need to branch if the first
+         * expr is true. Otherwise, we need to evaluate the
+         * second expr
+         */
+        gotoIf_instruction1 = ir_instruction(IR_GOTO_IF_TRUE);
+
+        gotoIf_instruction2 = ir_instruction(IR_GOTO_IF_TRUE);
+
+        /* Create the constInt instruction for the number 0 */
+        ir_operand_temporary(constant_instruction1, 0);
+        constant_instruction1->operands[1].kind = OPERAND_NUMBER;
+        constant_instruction1->operands[1].data.number = 0;
+        constant_instruction1->operands[1].lvalue = false;
+
+        /* Create the constInt instruction for the number 1 */
+        ir_operand_temporary(constant_instruction2, 0);
+        constant_instruction2->operands[1].kind = OPERAND_NUMBER;
+        constant_instruction2->operands[1].data.number = 1;
+        constant_instruction2->operands[1].lvalue = false;
+
+        break;
+      case BINOP_LOGICAL_AND_EXPR:
+        /* For the AND Expr, we need to branch if the first
+         * expr is false. Otherwise, we need to evaluate the
+         * second expr
+         */
+        gotoIf_instruction1 = ir_instruction(IR_GOTO_IF_FALSE);
+
+        gotoIf_instruction2 = ir_instruction(IR_GOTO_IF_FALSE);
+
+        /* Create the constInt instruction for the number 0 */
+        ir_operand_temporary(constant_instruction1, 0);
+        constant_instruction1->operands[1].kind = OPERAND_NUMBER;
+        constant_instruction1->operands[1].data.number = 1;
+        constant_instruction1->operands[1].lvalue = false;
+
+        /* Create the constInt instruction for the number 1 */
+        ir_operand_temporary(constant_instruction2, 0);
+        constant_instruction2->operands[1].kind = OPERAND_NUMBER;
+        constant_instruction2->operands[1].data.number = 0;
+        constant_instruction2->operands[1].lvalue = false;
+        break;
+      default:
+        assert(0);
+        break;
+    }
+
+    /* We have prepared the branching instructions and the constInts based upon
+     * whether the operation is && or ||.  Now crate the instructions completely
+     * by using the labels etc. This is the same irrespective of && or ||
+     */
+    ir_generate_gotoFalseOrTrue(gotoIf_instruction1, node_get_result(left)->ir_operand, label_instruction1);
+
+    ir_generate_gotoFalseOrTrue(gotoIf_instruction2, node_get_result(right)->ir_operand, label_instruction1);
+
+    storeword_instruction1 = ir_instruction(IR_STORE_WORD);
+    ir_operand_temporary(storeword_instruction1, 0);
+    ir_operand_copy(storeword_instruction1, 1,
+                    &constant_instruction1->operands[0]);
+
+    goto_instruction = ir_instruction(IR_GOTO);
+    ir_generate_goto(goto_instruction, label_instruction2);
+
+    storeword_instruction2 = ir_instruction(IR_STORE_WORD);
+    ir_operand_copy(storeword_instruction2, 0,
+                    &storeword_instruction1->operands[0]);
+    ir_operand_copy(storeword_instruction2, 1,
+                    &constant_instruction2->operands[0]);
+
+    /* Create the IR by adding up all the instructions */
+    binary_operation->ir = ir_copy(left->ir);
+    ir_append(binary_operation->ir, gotoIf_instruction1);
+    binary_operation->ir = ir_concatenate(binary_operation->ir, right->ir);
+    ir_append(binary_operation->ir, gotoIf_instruction2);
+    ir_append(binary_operation->ir, constant_instruction1);
+    ir_append(binary_operation->ir, storeword_instruction1);
+    ir_append(binary_operation->ir, goto_instruction);
+    ir_append(binary_operation->ir, label_instruction1);
+    ir_append(binary_operation->ir, constant_instruction2);
+    ir_append(binary_operation->ir, storeword_instruction2);
+    ir_append(binary_operation->ir, label_instruction2);
+
+    binary_operation->data.binary_operation.result.ir_operand = &storeword_instruction2->operands[0];
+    binary_operation->data.binary_operation.result.ir_operand->lvalue = false;
+}
 
 void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
                                                    struct node *the_operand) {
@@ -467,7 +606,7 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
         ir_generate_for_expression(the_operand);
         if(!node_get_result(the_operand)->ir_operand->lvalue) {
             ir_generation_num_errors++;
-            printf("ERROR: The operand to a unary operation must be an lvalue\n");
+            printf("ERROR: The operand to the indirection operation must be an lvalue\n");
         }
         ir_generate_for_conversion_to_rvalue(the_operand);
         node_get_result(the_operand)->ir_operand->lvalue = true;
@@ -592,6 +731,12 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
     case BINOP_BITWISE_AND_EXPR:
         ir_generate_for_arithmetic_binary_operation(IR_BITWISE_AND, binary_operation);
         break;
+
+    case BINOP_LOGICAL_OR_EXPR:
+    case BINOP_LOGICAL_AND_EXPR:
+      ir_generate_for_logical_binary_operation(binary_operation->data.binary_operation.operation,
+                                               binary_operation);
+      break;
 
     default:
       assert(0);
@@ -965,7 +1110,6 @@ void ir_generate_for_statement_list(struct node *statement_list) {
 }
 
 void ir_generate_for_expression(struct node *expression) {
-  /* xxx: printf("Kind of node: %d\n", expression->kind); */
     struct ir_instruction *no_op_instruction;
   switch (expression->kind) {
     case NODE_IDENTIFIER:
@@ -981,7 +1125,9 @@ void ir_generate_for_expression(struct node *expression) {
     case NODE_BINARY_OPERATION:
       ir_generate_for_binary_operation(expression);
       break;
-
+    case NODE_TERNARY_OPERATION:
+      ir_generate_for_ternary_operation(expression);
+      break;
     case NODE_UNARY_OPERATION:
       ir_generate_for_unary_operation(expression);
       break;
@@ -1098,6 +1244,7 @@ static void ir_print_opcode(FILE *output, int kind) {
     "RETURNWORD",
     "PROCBEGIN",
     "PROCEND",
+    "GOTOIFTRUE",
     NULL
   };
 
@@ -1168,6 +1315,7 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_LOGICAL_NOT:
     case IR_NEGATION:
     case IR_GOTO_IF_FALSE:
+    case IR_GOTO_IF_TRUE:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[1]);

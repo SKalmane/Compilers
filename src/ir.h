@@ -67,6 +67,7 @@ struct ir_operand {
 #define IR_RETURN                 34
 #define IR_FUNCTION_BEGIN         35
 #define IR_FUNCTION_END           36
+#define IR_GOTO_IF_TRUE           37
 
 struct ir_instruction {
   int kind;

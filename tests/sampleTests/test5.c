@@ -10,7 +10,6 @@ void fib(int n) {
         a++;
     } while(a < 10);
 
-    /* a = (bla < 5); */
     /* c = (a == bla); */
     /* a = (c | bla); */
     /* bla += 10; */
