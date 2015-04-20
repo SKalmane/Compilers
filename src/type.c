@@ -746,7 +746,7 @@ void type_assign_in_expression(struct node *expression) {
       type_assign_in_binary_operation(expression);
       break;
     case NODE_STRING:
-      expression->data.number.result.type =
+      expression->data.string.result.type =
           type_pointer(type_basic(false, TYPE_WIDTH_CHAR, CONVERSION_RANK_CHAR));
       break;
     case NODE_TERNARY_OPERATION:

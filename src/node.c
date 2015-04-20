@@ -97,6 +97,8 @@ struct node *node_string(char *text, int length)
   }
   /* Wrap up the string with the NULL character at the end */
   node->data.string.name[length] = 0;
+  node->data.string.result.type = NULL;
+  node->data.string.result.ir_operand = NULL;
   return node;
 }
 
@@ -419,6 +421,8 @@ struct result *node_get_result(struct node *expression) {
       return &expression->data.identifier.symbol->result;
     case NODE_BINARY_OPERATION:
       return &expression->data.binary_operation.result;
+    case NODE_UNARY_OPERATION:
+      return &expression->data.unary_operation.result;
     case NODE_CAST_EXPR:
       return &expression->data.cast_expr.result;
     case NODE_FUNCTION_CALL:
@@ -693,8 +697,10 @@ void node_print_function_def_specifier(FILE *output, struct node *function_def_s
     node_print_handler(output,
                        function_def_specifier->data.function_def_specifier.decl_specifier);
     fputs(" ", output);
-    node_print_handler(output,
-                       function_def_specifier->data.function_def_specifier.declarator);
+    if(function_def_specifier->data.function_def_specifier.declarator != NULL) {
+        node_print_handler(output,
+                           function_def_specifier->data.function_def_specifier.declarator);
+    }
 }
 
 void node_print_function_declarator(FILE *output, struct node *function_declarator) {
@@ -787,7 +793,9 @@ void node_print_statement(FILE *output, struct node *statement) {
       break;
     case RETURN_STATEMENT_TYPE:
       fprintf(output, "return ");
-      node_print_handler(output, statement->data.statement.expression);
+      if(statement->data.statement.expression != NULL) {
+          node_print_handler(output, statement->data.statement.expression);
+      }
       fputs(";\n", output);
       break;
     case GOTO_STATEMENT_TYPE:
@@ -1043,6 +1051,7 @@ void node_print_translation_unit(FILE *output, struct node *translation_unit) {
     node_print_translation_unit(output, translation_unit->data.translation_unit.translation_unit);
   }
   if(translation_unit->data.translation_unit.top_level_decl != NULL) {
+      printf("Kind: %d",translation_unit->data.translation_unit.top_level_decl->kind);
     node_print_handler(output, translation_unit->data.translation_unit.top_level_decl);
   }
 }

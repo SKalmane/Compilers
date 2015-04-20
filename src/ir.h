@@ -10,16 +10,24 @@ struct symbol_table;
 
 #define OPERAND_NUMBER                  1
 #define OPERAND_TEMPORARY               2
-#define OPERAND_BRANCH_LABEL            3
+#define OPERAND_GENERATED_LABEL         3
 #define OPERAND_IDENTIFIER              4
+#define OPERAND_STRING                  5
+#define OPERAND_NULL                    6
+
 struct ir_operand {
   int kind;
   bool lvalue;
-    
+
   union {
-    unsigned long number;
-    int temporary;
-    char identifier_name[MAX_IDENTIFIER_LENGTH];
+      unsigned long number;
+      int temporary;
+      char identifier_name[MAX_IDENTIFIER_LENGTH+1];
+      int generated_label;
+      struct {
+          int generated_label;
+          char name[MAX_STRING_LENGTH];
+      } string_label;
   } data;
 };
 
@@ -32,7 +40,7 @@ struct ir_operand {
 #define IR_LOAD_IMMEDIATE          7
 #define IR_COPY                    8
 #define IR_PRINT_NUMBER            9
-#define IR_GENERATE_LABEL         10
+#define IR_GENERATED_LABEL        10
 #define IR_GOTO                   11
 #define IR_FUNCTION_CALL          12
 #define IR_ADDRESS_OF             13
@@ -51,19 +59,14 @@ struct ir_operand {
 #define IR_BIFEQZ                 26
 #define IR_BIFNOTEQZ              27
 #define IR_STORE_WORD             28
-#define IR_PREFIX_INC             29
-#define IR_POSTFIX_INC            30
-#define IR_SIZEOF                 31
-#define IR_BITWISE_NOT            32
-#define IR_LOGICAL_NOT            33
-#define IR_NEGATION               34
-#define IR_UNARY_PLUS             35
-#define IR_ADDRESS_OF             36
-#define IR_INDIRECTION            37
-#define IR_CASTING                38
-#define IR_POSTFIX_DEC            39
-#define IR_PREFIX_DEC             40
-
+#define IR_SIZEOF                 29
+#define IR_BITWISE_NOT            30
+#define IR_LOGICAL_NOT            31
+#define IR_NEGATION               32
+#define IR_GOTO_IF_FALSE          33
+#define IR_RETURN                 34
+#define IR_FUNCTION_BEGIN         35
+#define IR_FUNCTION_END           36
 
 struct ir_instruction {
   int kind;

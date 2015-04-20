@@ -82,6 +82,7 @@ struct node {
     struct {
       char name[MAX_STRING_LENGTH + 1];
       int length;
+      struct result result;
     } string;
     struct {
       int operation;
