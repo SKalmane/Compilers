@@ -115,13 +115,13 @@ static void ir_generate_label(struct ir_instruction *instruction) {
   instruction->operands[0].data.generated_label = next_generated_label++;
 }
 
-static void ir_generate_string_label(struct ir_instruction *instruction,
+static void ir_generate_string_label(struct ir_instruction **instruction,
                                      struct node *string) {
   static int next_generated_string_label;
-  ir_operand_temporary(instruction, 0);
-  instruction->operands[1].kind = OPERAND_STRING;
-  instruction->operands[1].data.string_label.generated_label = next_generated_string_label++;
-  strncpy(instruction->operands[1].data.string_label.name, string->data.string.name,
+  ir_operand_temporary((*instruction), 0);
+  (*instruction)->operands[1].kind = OPERAND_STRING;
+  (*instruction)->operands[1].data.string_label.generated_label = next_generated_string_label++;
+  strncpy((*instruction)->operands[1].data.string_label.name, string->data.string.name,
       MAX_STRING_LENGTH);
 }
 
@@ -181,7 +181,7 @@ void ir_generate_for_string(struct node *string) {
   assert(NODE_STRING == string->kind);
   /* load the address as an lvalue */
   instruction = ir_instruction(IR_ADDRESS_OF);
-  ir_generate_string_label(instruction, string);
+  ir_generate_string_label(&instruction, string);
 
   string->ir = ir_section(instruction, instruction);
 
@@ -604,9 +604,9 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
         break;
       case UNARYOP_INDIRECTION:
         ir_generate_for_expression(the_operand);
-        if(!node_get_result(the_operand)->ir_operand->lvalue) {
+        if(node_get_result(the_operand)->ir_operand->lvalue) {
             ir_generation_num_errors++;
-            printf("ERROR: The operand to the indirection operation must be an lvalue\n");
+            printf("ERROR: The operand to the indirection operation must be an rvalue\n");
         }
         ir_generate_for_conversion_to_rvalue(the_operand);
         node_get_result(the_operand)->ir_operand->lvalue = true;
@@ -618,6 +618,66 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
     }
     unary_operation->ir = the_operand->ir;
     node_get_result(unary_operation)->ir_operand = node_get_result(the_operand)->ir_operand;
+}
+
+void ir_generate_for_unary_casting_expr(struct ir_operand *ir_operand, 
+                                        struct node *unary_casting_expr) {
+    struct node *the_operand = unary_casting_expr->data.unary_operation.the_operand;
+    struct ir_instruction *instruction;
+    if(the_operand->kind == NODE_TYPE_SPECIFIER) {
+        switch(the_operand->data.type_specifier.kind_of_type_specifier) {
+          case UNSIGNED_CHARACTER_TYPE:
+            instruction = ir_instruction(IR_CAST_TO_U_BYTE);
+            break;
+          case SIGNED_CHARACTER_TYPE:
+            instruction = ir_instruction(IR_CAST_TO_S_BYTE);
+            break;
+          case UNSIGNED_SHORT_INT:
+            instruction = ir_instruction(IR_CAST_TO_U_HALFWORD);
+            break;
+          case SIGNED_SHORT_INT:
+            instruction = ir_instruction(IR_CAST_TO_S_HALFWORD);
+            break;
+          case UNSIGNED_LONG_INT:
+          case UNSIGNED_INT:
+            instruction = ir_instruction(IR_CAST_TO_U_WORD);
+            break;
+          case SIGNED_LONG_INT:
+          case SIGNED_INT:
+            instruction = ir_instruction(IR_CAST_TO_S_WORD);
+            break;
+          case VOID_TYPE:
+            ir_generation_num_errors++;
+            printf("ERROR: Casting to a void type that is not a pointer is not allowed\n");
+            instruction = ir_instruction(IR_NO_OPERATION);
+            break;
+          default:
+            assert(0);
+            break;
+        }
+    } else {
+        /* There is an abstract declarator involved, it is a pointer type */
+        instruction = ir_instruction(IR_CAST_TO_U_WORD);
+    }
+    ir_operand_temporary(instruction, 0);
+    ir_operand_copy(instruction, 1, ir_operand);
+    ir_append(the_operand->ir, instruction);
+    unary_casting_expr->ir = ir_section(instruction, instruction);
+    node_get_result(unary_casting_expr)->ir_operand = &instruction->operands[0];
+    node_get_result(unary_casting_expr)->ir_operand->lvalue = false;
+}
+
+void ir_generate_for_cast_expr(struct node *cast_expr) {
+    struct node *unary_casting_expr = cast_expr->data.cast_expr.unary_casting_expr;
+    struct node *cast_expr_within = cast_expr->data.cast_expr.cast_expr;
+
+    ir_generate_for_expression(cast_expr_within);
+
+    ir_generate_for_unary_casting_expr(node_get_result(cast_expr_within)->ir_operand, 
+                                       unary_casting_expr);
+    cast_expr->ir = ir_concatenate(cast_expr_within->ir, unary_casting_expr->ir);
+    node_get_result(cast_expr)->ir_operand = node_get_result(unary_casting_expr)->ir_operand;
+    node_get_result(cast_expr)->ir_operand->lvalue = false;
 }
 
 void ir_generate_for_binary_operation(struct node *binary_operation) {
@@ -1166,6 +1226,9 @@ void ir_generate_for_expression(struct node *expression) {
     case NODE_EXPRESSION_LIST:
       ir_generate_for_expression_list(expression);
       break;
+    case NODE_CAST_EXPR:
+      ir_generate_for_cast_expr(expression);
+      break;
     default:
       printf("Node not found: %d\n", expression->kind);
       assert(0);
@@ -1245,6 +1308,12 @@ static void ir_print_opcode(FILE *output, int kind) {
     "PROCBEGIN",
     "PROCEND",
     "GOTOIFTRUE",
+    "CASTUWORD",
+    "CASTSWORD",
+    "CASTUHWORD",
+    "CASTSHWORD",
+    "CASTUBYTE",
+    "CASTSBYTE",
     NULL
   };
 
@@ -1316,6 +1385,12 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_NEGATION:
     case IR_GOTO_IF_FALSE:
     case IR_GOTO_IF_TRUE:
+    case IR_CAST_TO_U_WORD:
+    case IR_CAST_TO_S_WORD:
+    case IR_CAST_TO_U_HALFWORD:
+    case IR_CAST_TO_S_HALFWORD:
+    case IR_CAST_TO_U_BYTE:
+    case IR_CAST_TO_S_BYTE:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[1]);

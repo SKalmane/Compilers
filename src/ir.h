@@ -68,6 +68,12 @@ struct ir_operand {
 #define IR_FUNCTION_BEGIN         35
 #define IR_FUNCTION_END           36
 #define IR_GOTO_IF_TRUE           37
+#define IR_CAST_TO_U_WORD         38
+#define IR_CAST_TO_S_WORD         39
+#define IR_CAST_TO_U_HALFWORD     40
+#define IR_CAST_TO_S_HALFWORD     41
+#define IR_CAST_TO_U_BYTE         42
+#define IR_CAST_TO_S_BYTE         43
 
 struct ir_instruction {
   int kind;

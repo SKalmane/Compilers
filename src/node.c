@@ -430,7 +430,7 @@ struct result *node_get_result(struct node *expression) {
     case NODE_FUNCTION_CALL:
       return &expression->data.function_call.result;
     case NODE_STRING:
-      return &expression->data.number.result;
+      return &expression->data.string.result;
     case NODE_SUBSCRIPT_EXPR:
       return &expression->data.subscript_expr.result;
     default:
