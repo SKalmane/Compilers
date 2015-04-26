@@ -32,7 +32,79 @@ void mips_print_number_operand(FILE *output, struct ir_operand *operand) {
   fprintf(output, "%10lu", operand->data.number);
 }
 
+void mips_print_identifier_operand(FILE *output, struct ir_operand *operand) {
+  assert(OPERAND_IDENTIFIER == operand->kind);
+
+  fprintf(output, "%s", operand->data.identifier_name);
+}
+
 void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
+    /* 3 operand R-Type instructions
+     * add rdest, rsource1, rsource2
+     * addu rdest, rsource1, rsource2
+     * sub
+     * subu
+     * slt (set on less than) - compare as signed int, return 1 if true, 0 if false
+     * sltu
+     * and
+     * or
+     * xor
+     * nor
+     * srl rd, rt, sa (shift right logical by sa bits)
+     * sra rd, rt, sa (shift right by sa, sign extending)
+     * srlv rd, rt, rs (shift right by no of last 5 bits in rs)
+     * srav rd, rt, rs (shift right by no of last 5 bits in rs, sign extending)
+     * sll (shift left logical)
+     * sllv (shift left logical variable)
+     */
+
+    /* Immediate Instructions
+     * addi rt, rs, imm (imm is sign-extended and added to rs, stored in rt)
+     * addiu
+     * slti (set on less than immediate)
+     * sltiu
+     * andi (bitwise AND immediate)
+     * ori
+     * xori
+     * lui (load upper immediate)
+     */
+
+    /* Branch instructions
+     * beq rs, rt, offset  (branch on equal)
+     * bne
+     * blez rs, offset
+     * bgtz
+     * bltz
+     * bgez
+     * bltzal (branch on less than zero and link - used to call functions)
+     * bgezal
+     */
+
+    /* Jump instructions
+     * j
+     * jal (jump and link)
+     * jalr (jump and link register)
+     */
+
+    /* Load and store
+     * lb rt, offset(base) (load byte)
+     * lbu
+     * lh
+     * lhu
+     * lw
+     *
+     */
+    /* Mult/divide Instructions
+     * mult op1, op2
+     * multu
+     * div
+     * divu
+     * mfhi rd (move from high register)
+     * mfli rd (move from low register)
+     * mthi rd (move to high register)
+     * mtli rd
+     */
+
   static char *opcodes[] = {
     NULL,
     NULL,
@@ -80,6 +152,84 @@ void mips_print_print_number(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, "\n%10s\n", "syscall");
 }
 
+bool need_to_allocate_memory_for_identifier(char **local_variables, 
+                                            char *identifier) {
+    int i = 0;
+    bool string_already_present = false;
+    while(local_variables[i] != NULL) {
+        if(strcmp(local_variables[i], identifier)) {
+            string_already_present = true;
+            break;
+        }
+        i++;
+    }
+    if(!string_already_present) {
+        strncpy(local_variables[i], identifier, MAX_IDENTIFIER_LENGTH);
+    }
+    return !string_already_present;
+}
+
+void mips_print_function(FILE *output, struct ir_instruction *instruction) {
+    struct ir_instruction *temp_instruction = instruction;
+    char **local_variables;
+
+    /* To start off, we need storage space for:
+     * 1.  s0 to s7 (32 bytes),
+     * a0 - a3 (16 bytes)
+     * the old stack frame pointer $fp (4 bytes)
+     * the return address $ra (4 bytes)
+     * one reserved word (4 bytes)
+     * The minimum space needed = 60 bytes
+     */
+    int number_of_bytes_for_frame = 60;
+
+    local_variables = malloc( 10* sizeof(char *));
+
+    /* Now, find out the additional of memory needed for the function */
+    while(temp_instruction->kind != IR_FUNCTION_END) {
+        temp_instruction = temp_instruction->next;
+        if((temp_instruction->kind == IR_ADDRESS_OF) &&
+            (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
+            if(need_to_allocate_memory_for_identifier(
+                   local_variables,
+                   temp_instruction->operands[1].data.identifier_name)) {
+                number_of_bytes_for_frame += 4;
+            }
+        }
+    }
+
+    /* First, print out the label corresponding to this function name in the
+     * mips file */
+    fputs("\n", output);
+    mips_print_identifier_operand(output, &instruction->operands[0]);
+    fputs(":\n", output);
+
+    /* Print all the stack frame related instructions */
+    fprintf(output, "%10s %10s, %10s, %10d\n", "addi", "$sp", "$sp", -(number_of_bytes_for_frame));
+    /* Store the old frame pointer */
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$fp", "52($sp)");
+    /* Save the return address */
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$ra", "56($sp)");
+    /* Set the new frame pointer */
+    fprintf(output, "%10s %10s, %10s, %10s\n", "or", "$fp", "$sp", "$0");
+    /* Save the passed in parameters */
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$a0", "4($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$a1", "8($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$a2", "12($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$a3", "16($fp)");
+
+    /* Save the s-registers */
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s0", "20($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s1", "24($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s2", "28($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s3", "32($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s4", "36($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s5", "40($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s6", "44($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$s7", "48($fp)");
+
+}
+
 void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
   switch (instruction->kind) {
     case IR_MULTIPLY:
@@ -101,19 +251,54 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
       mips_print_print_number(output, instruction);
       break;
 
+    case IR_FUNCTION_BEGIN:
+      mips_print_function(output, instruction);
+      break;
     case IR_NO_OPERATION:
       break;
 
     default:
+      printf("Kind of IR Instruction: %d\n", instruction->kind);
       assert(0);
       break;
   }
 }
 
+void print_string(FILE *output, char *str) {
+    int i = 0;
+    fputs("\"", output);
+    do {
+        if (str[i] == 0) {
+            fputs("\\0", output);
+        } else if(str[i] == '\\') {
+            fputs("\\", output);
+        } else if(str[i] == '\n') {
+            fputs("\\n", output);
+        } else {
+            fprintf(output, "%c", str[i]);
+        }
+        i++;
+    } while(str[i] != '\0');
+    fputs("\"", output);
+}
+
+void mips_print_string_labels(FILE *output, struct ir_section *section) {
+    struct ir_instruction *instruction;
+    for (instruction = section->first; instruction != section->last->next; instruction = instruction->next) {
+        if(instruction->operands[1].kind == OPERAND_STRING) {
+          fprintf(output, "\n__GeneratedStringLabel_%04d: .asciiz ",
+                  instruction->operands[1].data.string_label.generated_label);
+          print_string(output, instruction->operands[1].data.string_label.name);
+      }
+    }
+    fputs("\n", output);
+}
+
 void mips_print_text_section(FILE *output, struct ir_section *section) {
   struct ir_instruction *instruction;
 
-  fputs("\n.data\nnewline: .asciiz \"\\n\"", output);
+  mips_print_string_labels(output, section);
+
   fputs("\n.text\nmain:\n", output);
 
   for (instruction = section->first; instruction != section->last->next; instruction = instruction->next) {

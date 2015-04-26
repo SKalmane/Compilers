@@ -28,7 +28,7 @@ struct symbol *symbol_get(struct symbol_table *table, char name[]) {
   struct symbol_list *iter;
   while(present_symbol_table != NULL) {
       for (iter = present_symbol_table->variables; NULL != iter; iter = iter->next) {
-          printf("Present symbol name: %s\n", iter->symbol.name);
+          /* printf("Present symbol name: %s\n", iter->symbol.name); */
           if (!strcmp(name, iter->symbol.name)) {
               return &iter->symbol;
           }
@@ -43,7 +43,7 @@ struct symbol *symbol_put(struct symbol_table **table, char name[],
   struct symbol_list *symbol_list;
   symbol_list = malloc(sizeof(struct symbol_list));
   assert(NULL != symbol_list);
-  printf("Adding symbol of name: %s\n", name);
+  /* printf("Adding symbol of name: %s\n", name); */
   strncpy(symbol_list->symbol.name, name, MAX_IDENTIFIER_LENGTH);
   symbol_list->symbol.result.type = type;
   symbol_list->symbol.result.ir_operand = NULL;
@@ -97,7 +97,7 @@ void symbol_add_from_identifier(struct symbol_table **table, struct node *identi
                                 struct type **type) {
   struct symbol *symbol;
   assert(NODE_IDENTIFIER == identifier->kind);
-  printf("Identifier name: %s\n", identifier->data.identifier.name);
+  /* printf("Identifier name: %s\n", identifier->data.identifier.name); */
   symbol = symbol_get(*table, identifier->data.identifier.name);
   if (NULL == symbol) {
       if(type == NULL) {
@@ -105,7 +105,7 @@ void symbol_add_from_identifier(struct symbol_table **table, struct node *identi
           printf("ERROR: Type of identifier %s not defined\n", identifier->data.identifier.name);
       } else {
           symbol = symbol_put(table, identifier->data.identifier.name, *type);
-          printf("Just added to symbol table : %p\n", (void *)(*table));
+          /* printf("Just added to symbol table : %p\n", (void *)(*table)); */
       }
   }
   identifier->data.identifier.symbol = symbol;
@@ -793,7 +793,7 @@ void symbol_print_table(FILE *output, struct symbol_table *table) {
 
   for (iter = table->variables; NULL != iter; iter = iter->next) {
       fprintf(output, "  variable: %s $%p\n", iter->symbol.name, (void *)&iter->symbol);
-    symbol_print_type(output, iter->symbol.result.type);
+    /* symbol_print_type(output, iter->symbol.result.type); */
   }
   fputs("\n", output);
 }

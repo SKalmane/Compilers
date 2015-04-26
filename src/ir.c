@@ -12,9 +12,7 @@ int ir_generation_num_errors;
 /* xxx: Things to do:
  * Casting
  * Subscript Exprs
- * Function call parameters
- * Question - for *(p + i), should p+i be an lvalue ?
- * That is, should the operand of indirection be an lvalue?
+ * String Labels need to be stored
  */
 
 /************************
@@ -984,20 +982,32 @@ void ir_generate_for_for_expr(struct node *for_expr,
     }
 }
 
-void ir_generate_for_expression_list(struct node *expression_list) {
+void ir_generate_for_expression_list(struct node *expression_list, int *num_of_parameters) {
     struct node *expression_list_within = expression_list->data.expression_list.expression_list;
     struct node *assignment_expr = expression_list->data.expression_list.assignment_expr;
+    struct ir_instruction *instruction;
 
     if(expression_list_within != NULL) {
-        ir_generate_for_expression(expression_list_within);
+        ir_generate_for_expression_list(expression_list_within, num_of_parameters);
         expression_list->ir = ir_copy(expression_list_within->ir);
     }
     ir_generate_for_expression(assignment_expr);
     ir_generate_for_conversion_to_rvalue(assignment_expr);
+    instruction = ir_instruction(IR_FUNCTION_PARAMETER);
+
+    instruction->operands[0].kind = OPERAND_NUMBER;
+    instruction->operands[0].data.number = *num_of_parameters;
+    instruction->operands[0].lvalue = false;
+    (*num_of_parameters)++;
+
+    ir_operand_copy(instruction, 1, node_get_result(assignment_expr)->ir_operand);
+
     if(expression_list->ir != NULL) {
         expression_list->ir = ir_concatenate(expression_list->ir, assignment_expr->ir);
+        ir_append(expression_list->ir, instruction);
     } else {
         expression_list->ir = ir_copy(assignment_expr->ir);
+        ir_append(expression_list->ir, instruction);
     }
 }
 
@@ -1005,6 +1015,8 @@ void ir_generate_for_function_call(struct node *function_call) {
     struct node *postfix_expr = function_call->data.function_call.postfix_expr;
     struct node *expression_list = function_call->data.function_call.expression_list;
     struct ir_instruction *instruction = ir_instruction(IR_FUNCTION_CALL);
+    struct ir_instruction *resultword_instruction = ir_instruction(IR_RESULTWORD);
+    int num_of_parameters = 0; /* initialized value */
     assert(NODE_FUNCTION_CALL == function_call->kind);
     ir_generate_for_expression(postfix_expr);
     if(postfix_expr->kind != NODE_IDENTIFIER) {
@@ -1012,14 +1024,22 @@ void ir_generate_for_function_call(struct node *function_call) {
         printf("ERROR: The function name has to be an identifier\n");
         return;
     }
-    if(expression_list != NULL) {
-        ir_generate_for_expression(expression_list);
+    if(expression_list != NULL) {        
+        ir_generate_for_expression_list(expression_list, &num_of_parameters);
         function_call->ir = ir_copy(expression_list->ir);
     }
     ir_operand_identifier(instruction, 0, postfix_expr);
     ir_append(function_call->ir, instruction);
-    node_get_result(function_call)->ir_operand = &instruction->operands[0];
-    node_get_result(function_call)->ir_operand->lvalue = false;
+    /* xxx: Need to implement ternary_operation's type assignment
+     * if(node_get_result(function_call)->type->kind != TYPE_VOID) { */
+        ir_operand_temporary(resultword_instruction, 0);
+        ir_append(function_call->ir, resultword_instruction);
+        node_get_result(function_call)->ir_operand = &resultword_instruction->operands[0];
+        node_get_result(function_call)->ir_operand->lvalue = false;
+    /* } else { */
+    /*     node_get_result(function_call)->ir_operand = &instruction->operands[0]; */
+    /*     node_get_result(function_call)->ir_operand->lvalue = false; */
+    /* } */
 }
 
 void ir_generate_for_for_statement(struct node *for_statement) {
@@ -1224,7 +1244,8 @@ void ir_generate_for_expression(struct node *expression) {
       ir_generate_for_function_call(expression);
       break;
     case NODE_EXPRESSION_LIST:
-      ir_generate_for_expression_list(expression);
+      printf("Expression List should only be called from function call's IR Generator\n");
+      assert(0);
       break;
     case NODE_CAST_EXPR:
       ir_generate_for_cast_expr(expression);
@@ -1314,6 +1335,8 @@ static void ir_print_opcode(FILE *output, int kind) {
     "CASTSHWORD",
     "CASTUBYTE",
     "CASTSBYTE",
+    "PARAMETER",
+    "RESULWORD",
     NULL
   };
 
@@ -1391,6 +1414,7 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_CAST_TO_S_HALFWORD:
     case IR_CAST_TO_U_BYTE:
     case IR_CAST_TO_S_BYTE:
+    case IR_FUNCTION_PARAMETER:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[1]);
@@ -1402,6 +1426,7 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_FUNCTION_CALL:
     case IR_FUNCTION_BEGIN:
     case IR_FUNCTION_END:
+    case IR_RESULTWORD:
       ir_print_operand(output, &instruction->operands[0]);
       break;
     case IR_NO_OPERATION:

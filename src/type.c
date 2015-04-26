@@ -301,8 +301,10 @@ void apply_usual_array_unary_conversion(struct node *unary_operation) {
 
 void type_assign_in_unary_operation(struct node *unary_operation) {
   struct node *the_operand = unary_operation->data.unary_operation.the_operand;
-  struct type *operand_type = node_get_result(the_operand)->type;
+  struct type *operand_type;
   type_assign_in_expression(the_operand);
+  operand_type = node_get_result(the_operand)->type;
+
   assert(NODE_UNARY_OPERATION == unary_operation->kind);
   switch(operand_type->kind) {
     case TYPE_BASIC:
@@ -429,6 +431,9 @@ void type_convert_additive(struct node *binary_operation) {
       type_checking_num_errors++; printf("ERROR: operands of the additive expr are not compatible\n");
       break;
     }
+  } else if(type_is_array(left_operand_type) && type_is_arithmetic(right_operand_type)) {
+      assert(binary_operation->data.binary_operation.operation == BINOP_ADDITION);
+      node_get_result(binary_operation)->type = left_operand_type->data.array.array_type;
   } else if(type_is_pointer(left_operand_type) && type_is_pointer(right_operand_type)) {
     /* xxx: How to set a type for the pointer in this case? */
     type_checking_num_errors++; printf("ERROR: operands of expression are not compatible with the operation\n");
@@ -692,6 +697,9 @@ void type_assign_in_statement(struct node *statement) {
   assert(NODE_STATEMENT == statement->kind);
   if (NULL != statement->data.statement.statement) {
     type_assign_in_statement(statement->data.statement.statement);
+  }
+  if(statement->data.statement.type_of_statement== RETURN_STATEMENT_TYPE) {
+      printf("Return statement!\n");
   }
   type_assign_in_expression(statement->data.statement.expression);
 }

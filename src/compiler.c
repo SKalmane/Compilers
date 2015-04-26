@@ -333,7 +333,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  /* type_assign_in_translation_unit(root_node); */
+  type_assign_in_translation_unit(root_node);
   if (type_checking_num_errors > 0) {
     print_errors_from_pass(stdout, "Type checking", type_checking_num_errors);
     return 4;
