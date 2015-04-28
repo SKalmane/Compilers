@@ -9,10 +9,15 @@
 #include "ir.h"
 
 int ir_generation_num_errors;
+
+int next_temporary;
+
 /* xxx: Things to do:
  * Casting
  * Subscript Exprs
- * String Labels need to be stored
+ * Signed/Unsigned additions
+ * Break/continue statements
+ * Compound assignments - should not evaluate twice
  */
 
 /************************
@@ -102,7 +107,6 @@ static void ir_operand_identifier(struct ir_instruction *instruction, int positi
 }
 
 static void ir_operand_temporary(struct ir_instruction *instruction, int position) {
-  static int next_temporary;
   instruction->operands[position].kind = OPERAND_TEMPORARY;
   instruction->operands[position].data.temporary = next_temporary++;
 }
@@ -135,8 +139,8 @@ static void ir_operand_copy(struct ir_instruction *instruction, int position, st
 
 static void ir_generate_gotoFalseOrTrue(struct ir_instruction *instruction, struct ir_operand *ir_operand,
                                     struct ir_instruction *label_instruction) {
-    ir_operand_copy(instruction, 0, ir_operand);
-    ir_operand_copy(instruction, 1, &label_instruction->operands[0]);
+    ir_operand_copy(instruction, 1, ir_operand);
+    ir_operand_copy(instruction, 0, &label_instruction->operands[0]);
 }
 
 static void ir_generate_goto(struct ir_instruction *instruction, struct ir_instruction *label_instruction) {
@@ -189,7 +193,9 @@ void ir_generate_for_string(struct node *string) {
   assert(NULL != string->data.string.result.ir_operand);
 }
 
-void ir_generate_for_expression(struct node *expression);
+void ir_generate_for_expression(struct node *expression,
+                                struct ir_instruction *function_end_label,
+                                struct ir_instruction *inner_loop_end_label);
 
 void ir_generate_for_conversion_to_rvalue(struct node *lvalue_node) {
     struct ir_instruction *instruction;
@@ -212,8 +218,8 @@ void ir_generate_for_arithmetic_binary_operation(int kind, struct node *binary_o
     struct ir_instruction *instruction;
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
 
-  ir_generate_for_expression(binary_operation->data.binary_operation.left_operand);
-  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand);
+  ir_generate_for_expression(binary_operation->data.binary_operation.left_operand, NULL, NULL);
+  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand, NULL, NULL);
 
   instruction = ir_instruction(kind);
   ir_operand_temporary(instruction, 0);
@@ -245,7 +251,7 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
 
   left = binary_operation->data.binary_operation.left_operand;
-  ir_generate_for_expression(left);
+  ir_generate_for_expression(left, NULL, NULL);
   assert(NULL != node_get_result(left)->ir_operand);
 
   if(!node_get_result(left)->ir_operand->lvalue) {
@@ -253,7 +259,7 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
       printf("ERROR: The left hand side of assignment operation is not an lvalue\n");
   }
 
-  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand);
+  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand, NULL, NULL);
 
   if(node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand->lvalue) {
       ir_generate_for_conversion_to_rvalue(binary_operation->data.binary_operation.right_operand);
@@ -287,7 +293,7 @@ void ir_generate_for_compound_assignment(int kind, struct node *binary_operation
   binary_operation->data.binary_operation.operation = kind;
   ir_generate_for_binary_operation(binary_operation);
 
-  ir_generate_for_expression(left);
+  ir_generate_for_expression(left, NULL, NULL);
   assert(NODE_IDENTIFIER == left->kind);
   assert(NULL != node_get_result(left)->ir_operand);
   if(!node_get_result(left)->ir_operand->lvalue) {
@@ -321,7 +327,7 @@ void ir_generate_for_ternary_operation(struct node *ternary_operation) {
 
     assert(NODE_TERNARY_OPERATION == ternary_operation->kind);
 
-    ir_generate_for_expression(first_operand);
+    ir_generate_for_expression(first_operand, NULL, NULL);
     if(node_get_result(first_operand)->ir_operand->lvalue) {
         ir_generate_for_conversion_to_rvalue(first_operand);
     }
@@ -335,7 +341,7 @@ void ir_generate_for_ternary_operation(struct node *ternary_operation) {
     gotoIf_instruction1 = ir_instruction(IR_GOTO_IF_FALSE);
     ir_generate_gotoFalseOrTrue(gotoIf_instruction1, node_get_result(first_operand)->ir_operand, label_instruction1);
 
-    ir_generate_for_expression(second_operand);
+    ir_generate_for_expression(second_operand, NULL, NULL);
     if(node_get_result(second_operand)->ir_operand->lvalue) {
         ir_generate_for_conversion_to_rvalue(second_operand);
     }
@@ -348,7 +354,7 @@ void ir_generate_for_ternary_operation(struct node *ternary_operation) {
     goto_instruction = ir_instruction(IR_GOTO);
     ir_generate_goto(goto_instruction, label_instruction2);
 
-    ir_generate_for_expression(third_operand);
+    ir_generate_for_expression(third_operand, NULL, NULL);
     if(node_get_result(third_operand)->ir_operand->lvalue) {
         ir_generate_for_conversion_to_rvalue(third_operand);
     }
@@ -388,7 +394,7 @@ void ir_generate_for_logical_binary_operation(int kind, struct node *binary_oper
 
     assert((kind == BINOP_LOGICAL_OR_EXPR) || (kind == BINOP_LOGICAL_AND_EXPR));
 
-    ir_generate_for_expression(left);
+    ir_generate_for_expression(left, NULL, NULL);
     if(node_get_result(left)->ir_operand->lvalue) {
         ir_generate_for_conversion_to_rvalue(left);
     }
@@ -399,7 +405,7 @@ void ir_generate_for_logical_binary_operation(int kind, struct node *binary_oper
     label_instruction2 = ir_instruction(IR_GENERATED_LABEL);
     ir_generate_label(label_instruction2);
 
-    ir_generate_for_expression(right);
+    ir_generate_for_expression(right, NULL, NULL);
     if(node_get_result(right)->ir_operand->lvalue) {
         ir_generate_for_conversion_to_rvalue(right);
     }
@@ -503,7 +509,7 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     struct ir_operand *addressOfOperand;
     struct ir_operand *valueOfOperandBeforeIncrementing;
 
-    ir_generate_for_expression(the_operand);
+    ir_generate_for_expression(the_operand, NULL, NULL);
     if(!node_get_result(the_operand)->ir_operand->lvalue) {
         ir_generation_num_errors++;
         printf("ERROR: The operand to the unary operation must be a modifiable lvalue");
@@ -547,7 +553,7 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
 
 void ir_generate_for_simple_unary_operation(int kind, struct node *the_operand) {
     struct ir_instruction *instruction;
-    ir_generate_for_expression(the_operand);
+    ir_generate_for_expression(the_operand, NULL, NULL);
     ir_generate_for_conversion_to_rvalue(the_operand);
     instruction = ir_instruction(kind);
     ir_operand_temporary(instruction, 0);
@@ -589,11 +595,11 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
         break;
       case UNARYOP_PLUS:
         /* nothing to do. everything will remain the same */
-        ir_generate_for_expression(the_operand);
+        ir_generate_for_expression(the_operand, NULL, NULL);
         ir_generate_for_conversion_to_rvalue(the_operand);
         break;
       case UNARYOP_ADDRESS_OF:
-        ir_generate_for_expression(the_operand);
+        ir_generate_for_expression(the_operand, NULL, NULL);
         if(!node_get_result(the_operand)->ir_operand->lvalue) {
             ir_generation_num_errors++;
             printf("ERROR: The operand to a unary operation must be an lvalue\n");
@@ -601,7 +607,7 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
         node_get_result(the_operand)->ir_operand->lvalue = false;
         break;
       case UNARYOP_INDIRECTION:
-        ir_generate_for_expression(the_operand);
+        ir_generate_for_expression(the_operand, NULL, NULL);
         if(node_get_result(the_operand)->ir_operand->lvalue) {
             ir_generation_num_errors++;
             printf("ERROR: The operand to the indirection operation must be an rvalue\n");
@@ -669,7 +675,7 @@ void ir_generate_for_cast_expr(struct node *cast_expr) {
     struct node *unary_casting_expr = cast_expr->data.cast_expr.unary_casting_expr;
     struct node *cast_expr_within = cast_expr->data.cast_expr.cast_expr;
 
-    ir_generate_for_expression(cast_expr_within);
+    ir_generate_for_expression(cast_expr_within, NULL, NULL);
 
     ir_generate_for_unary_casting_expr(node_get_result(cast_expr_within)->ir_operand, 
                                        unary_casting_expr);
@@ -802,13 +808,16 @@ void ir_generate_for_binary_operation(struct node *binary_operation) {
   }
 }
 
-void ir_generate_for_compound_statement(struct node *compound_statement) {
+void ir_generate_for_compound_statement(struct node *compound_statement,
+                                          struct ir_instruction *function_end_label,
+                                          struct ir_instruction *inner_loop_end_label) {
   struct node *declaration_or_statement_list =
       compound_statement->data.compound_statement.declaration_or_statement_list;
 
   assert(NODE_COMPOUND_STATEMENT == compound_statement->kind);
   if(declaration_or_statement_list != NULL) {
-      ir_generate_for_expression(declaration_or_statement_list);
+      ir_generate_for_expression(declaration_or_statement_list,
+                                 function_end_label, inner_loop_end_label);
       compound_statement->ir = declaration_or_statement_list->ir;
   }
 }
@@ -848,7 +857,7 @@ void ir_generate_for_function_definition(struct node *function_definition) {
      * We only care about the compound_statement */
   struct node *compound_statement = function_definition->data.function_definition.compound_statement;
   struct node *function_def_specifier = function_definition->data.function_definition.function_def_specifier;
-  struct ir_instruction *function_begin, *function_end;
+  struct ir_instruction *function_begin, *function_end, *function_end_label;
   struct node *function_name_identifier;
   assert(NODE_FUNCTION_DEFINITION == function_definition->kind);
 
@@ -859,34 +868,41 @@ void ir_generate_for_function_definition(struct node *function_definition) {
 
   function_definition->ir = ir_section(function_begin, function_begin);
 
-  ir_generate_for_expression(compound_statement);
+  function_end_label = ir_instruction(IR_GENERATED_LABEL);
+  ir_generate_label(function_end_label);
+
+  ir_generate_for_expression(compound_statement, function_end_label, NULL);
   function_definition->ir = ir_concatenate(function_definition->ir,
                                            compound_statement->ir);
 
+  
   function_end = ir_instruction(IR_FUNCTION_END);
   ir_operand_identifier(function_end, 0, function_name_identifier);
 
+  ir_append(function_definition->ir, function_end_label);
   ir_append(function_definition->ir, function_end);
 }
 
-void ir_generate_for_while_statement(struct node *while_statement) {
+void ir_generate_for_while_statement(struct node *while_statement, 
+                                     struct ir_instruction *function_end_label) {
   struct node *expression = while_statement->data.statement.expression;
   struct ir_instruction *label_instruction1, *label_instruction2;
   struct ir_instruction *gotoIfFalse_instruction, *goto_instruction;
   struct node *statement_within = while_statement->data.statement.statement;
 
   assert(NODE_STATEMENT == while_statement->kind);
-  ir_generate_for_expression(expression);
   label_instruction1 = ir_instruction(IR_GENERATED_LABEL);
   ir_generate_label(label_instruction1);
 
   label_instruction2 = ir_instruction(IR_GENERATED_LABEL);
   ir_generate_label(label_instruction2);
 
+  ir_generate_for_expression(expression, function_end_label, label_instruction2);
+
   gotoIfFalse_instruction = ir_instruction(IR_GOTO_IF_FALSE);
   ir_generate_gotoFalseOrTrue(gotoIfFalse_instruction, node_get_result(expression)->ir_operand, label_instruction2);
 
-  ir_generate_for_expression(statement_within);
+  ir_generate_for_expression(statement_within, function_end_label, label_instruction2);
 
   goto_instruction = ir_instruction(IR_GOTO);
   ir_generate_goto(goto_instruction, label_instruction1);
@@ -905,7 +921,7 @@ void ir_generate_for_expr(struct node *expr) {
     switch(expr->data.expr.type_of_expr) {
       case ASSIGNMENT_EXPR:
         assert(expr1 == NULL);
-        ir_generate_for_expression(expr2);
+        ir_generate_for_expression(expr2, NULL, NULL);
         expr->ir = expr2->ir;
         break;
       default:
@@ -914,11 +930,13 @@ void ir_generate_for_expr(struct node *expr) {
     }
 }
 
-void ir_generate_for_expression_statement(struct node *expression_statement) {
+void ir_generate_for_expression_statement(struct node *expression_statement,
+                                          struct ir_instruction *function_end_label,
+                                          struct ir_instruction *inner_loop_end_label) {
   struct ir_instruction *instruction;
   struct node *expression = expression_statement->data.statement.expression;
   assert(NODE_STATEMENT == expression_statement->kind);
-  ir_generate_for_expression(expression);
+  ir_generate_for_expression(expression, function_end_label, inner_loop_end_label);
   instruction = ir_instruction(IR_PRINT_NUMBER);
   ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand);
 
@@ -926,13 +944,14 @@ void ir_generate_for_expression_statement(struct node *expression_statement) {
   ir_append(expression_statement->ir, instruction);
 }
 
-void ir_generate_for_return_statement(struct node *return_statement) {
-  struct ir_instruction *instruction;
+void ir_generate_for_return_statement(struct node *return_statement,
+                                      struct ir_instruction *function_end_label) {
+    struct ir_instruction *instruction, *goto_instruction;
   struct node *expression = return_statement->data.statement.expression;
   assert(NODE_STATEMENT == return_statement->kind);
   instruction = ir_instruction(IR_RETURN);
   if(expression != NULL) {
-      ir_generate_for_expression(expression);
+      ir_generate_for_expression(expression, NULL, NULL);
       ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand);
   } else {
       instruction->operands[0].kind = OPERAND_NULL;
@@ -944,6 +963,11 @@ void ir_generate_for_return_statement(struct node *return_statement) {
   } else {
       return_statement->ir = ir_section(instruction, instruction);
   }
+
+  goto_instruction = ir_instruction(IR_GOTO);
+  ir_generate_goto(goto_instruction, function_end_label);
+  
+  ir_append(return_statement->ir, goto_instruction);
 }
 
 void ir_generate_for_for_expr(struct node *for_expr,
@@ -957,16 +981,16 @@ void ir_generate_for_for_expr(struct node *for_expr,
     assert(NODE_FOR_EXPR == for_expr->kind);
 
     if(initial_clause != NULL) {
-        ir_generate_for_expression(initial_clause);
+        ir_generate_for_expression(initial_clause, NULL, NULL);
     }
 
     if(expr1 != NULL) {
-        ir_generate_for_expression(expr1);
+        ir_generate_for_expression(expr1, NULL, NULL);
         gotoIfFalse_instruction = ir_instruction(IR_GOTO_IF_FALSE);
         ir_generate_gotoFalseOrTrue(gotoIfFalse_instruction, node_get_result(expr1)->ir_operand, label_instruction_conditional);
     }
     if(expr2 != NULL) {
-        ir_generate_for_expression(expr2);
+        ir_generate_for_expression(expr2, NULL, NULL);
     }
 
     for_expr->ir = ir_section(label_instruction_unconditional, label_instruction_unconditional);
@@ -991,7 +1015,7 @@ void ir_generate_for_expression_list(struct node *expression_list, int *num_of_p
         ir_generate_for_expression_list(expression_list_within, num_of_parameters);
         expression_list->ir = ir_copy(expression_list_within->ir);
     }
-    ir_generate_for_expression(assignment_expr);
+    ir_generate_for_expression(assignment_expr, NULL, NULL);
     ir_generate_for_conversion_to_rvalue(assignment_expr);
     instruction = ir_instruction(IR_FUNCTION_PARAMETER);
 
@@ -1018,7 +1042,7 @@ void ir_generate_for_function_call(struct node *function_call) {
     struct ir_instruction *resultword_instruction = ir_instruction(IR_RESULTWORD);
     int num_of_parameters = 0; /* initialized value */
     assert(NODE_FUNCTION_CALL == function_call->kind);
-    ir_generate_for_expression(postfix_expr);
+    ir_generate_for_expression(postfix_expr, NULL, NULL);
     if(postfix_expr->kind != NODE_IDENTIFIER) {
         ir_generation_num_errors++;
         printf("ERROR: The function name has to be an identifier\n");
@@ -1042,7 +1066,8 @@ void ir_generate_for_function_call(struct node *function_call) {
     /* } */
 }
 
-void ir_generate_for_for_statement(struct node *for_statement) {
+void ir_generate_for_for_statement(struct node *for_statement,
+                                   struct ir_instruction *function_end_label) {
   struct node *for_expr = for_statement->data.statement.expression;
   struct ir_instruction *label_instruction_unconditional, *label_instruction_conditional;
   struct ir_instruction *goto_instruction;
@@ -1060,7 +1085,7 @@ void ir_generate_for_for_statement(struct node *for_statement) {
                            label_instruction_conditional,
                            label_instruction_unconditional);
 
-  ir_generate_for_expression(statement_within);
+  ir_generate_for_expression(statement_within, function_end_label, label_instruction_conditional);
 
   goto_instruction = ir_instruction(IR_GOTO);
   ir_generate_goto(goto_instruction, label_instruction_unconditional);
@@ -1072,7 +1097,8 @@ void ir_generate_for_for_statement(struct node *for_statement) {
   ir_append(for_statement->ir, label_instruction_conditional);
 }
 
-void ir_generate_for_do_statement(struct node *do_statement) {
+void ir_generate_for_do_statement(struct node *do_statement,
+                                  struct ir_instruction *function_end_label) {
   struct node *expression = do_statement->data.statement.expression;
   struct ir_instruction *label_instruction1, *label_instruction2;
   struct ir_instruction *gotoIfFalse_instruction, *goto_instruction;
@@ -1085,9 +1111,9 @@ void ir_generate_for_do_statement(struct node *do_statement) {
   label_instruction2 = ir_instruction(IR_GENERATED_LABEL);
   ir_generate_label(label_instruction2);
 
-  ir_generate_for_expression(statement_within);
+  ir_generate_for_expression(statement_within, function_end_label, label_instruction2);
 
-  ir_generate_for_expression(expression);
+  ir_generate_for_expression(expression, NULL, NULL);
   gotoIfFalse_instruction = ir_instruction(IR_GOTO_IF_FALSE);
   ir_generate_gotoFalseOrTrue(gotoIfFalse_instruction, node_get_result(expression)->ir_operand, label_instruction2);
 
@@ -1102,7 +1128,9 @@ void ir_generate_for_do_statement(struct node *do_statement) {
   ir_append(do_statement->ir, label_instruction2);
 }
 
-void ir_generate_for_if_statement(struct node *if_statement) {
+void ir_generate_for_if_statement(struct node *if_statement,
+                                  struct ir_instruction *function_end_label,
+                                  struct ir_instruction *inner_loop_end_label) {
     struct node *expr = if_statement->data.if_statement.expr;
     struct node *if_statement_within = if_statement->data.if_statement.if_statement;
     struct node *else_statement_within = if_statement->data.if_statement.else_statement;
@@ -1112,16 +1140,16 @@ void ir_generate_for_if_statement(struct node *if_statement) {
         ir_generation_num_errors++;
         printf("ERROR: the Expression inside the if statement is empty. Not allowed\n");
     }
-    ir_generate_for_expression(expr);
+    ir_generate_for_expression(expr, NULL, NULL);
     label_instruction = ir_instruction(IR_GENERATED_LABEL);
     ir_generate_label(label_instruction);
     gotoIfFalse_instruction = ir_instruction(IR_GOTO_IF_FALSE);
     ir_generate_gotoFalseOrTrue(gotoIfFalse_instruction, node_get_result(expr)->ir_operand, label_instruction);
     if(if_statement_within != NULL) {
-        ir_generate_for_expression(if_statement_within);
+        ir_generate_for_expression(if_statement_within, function_end_label, inner_loop_end_label);
     }
     if(else_statement_within != NULL) {
-        ir_generate_for_expression(else_statement_within);
+        ir_generate_for_expression(else_statement_within, function_end_label, inner_loop_end_label);
     }
     if_statement->ir = ir_copy(expr->ir);
     ir_append(if_statement->ir, gotoIfFalse_instruction);
@@ -1143,24 +1171,33 @@ void ir_generate_for_goto_statement(struct node *goto_statement) {
     goto_statement->ir = ir_section(instruction, instruction);
 }
 
-void ir_generate_for_statement(struct node *statement) {
-
+void ir_generate_for_statement(struct node *statement,
+                                   struct ir_instruction *function_end_label,
+                                   struct ir_instruction *inner_loop_end_label) {
+    /* Reset temporaries for every statement */
+    
   assert(NODE_STATEMENT == statement->kind);
   switch(statement->data.statement.type_of_statement) {
     case EXPRESSION_STATEMENT_TYPE:
-      ir_generate_for_expression_statement(statement);
+      ir_generate_for_expression_statement(statement,
+                                           function_end_label, 
+                                           inner_loop_end_label);
       break;
     case WHILE_STATEMENT_TYPE:
-      ir_generate_for_while_statement(statement);
+      ir_generate_for_while_statement(statement, 
+                                      function_end_label);
       break;
     case RETURN_STATEMENT_TYPE:
-      ir_generate_for_return_statement(statement);
+      ir_generate_for_return_statement(statement,
+                                       function_end_label);
       break;
     case FOR_STATEMENT_TYPE:
-      ir_generate_for_for_statement(statement);
+      ir_generate_for_for_statement(statement,
+                                    function_end_label);
       break;
     case DO_STATEMENT_TYPE:
-      ir_generate_for_do_statement(statement);
+      ir_generate_for_do_statement(statement,
+                                   function_end_label);
       break;
     case GOTO_STATEMENT_TYPE:
       ir_generate_for_goto_statement(statement);
@@ -1173,23 +1210,27 @@ void ir_generate_for_statement(struct node *statement) {
   }
 }
 
-void ir_generate_for_statement_list(struct node *statement_list) {
+void ir_generate_for_statement_list(struct node *statement_list,
+                                   struct ir_instruction *function_end_label,
+                                   struct ir_instruction *inner_loop_end_label) {
   struct node *init = statement_list->data.statement_list.init;
   struct node *statement = statement_list->data.statement_list.statement;
 
   assert(NODE_STATEMENT_LIST == statement_list->kind);
 
   if (NULL != init) {
-    ir_generate_for_expression(init);
-    ir_generate_for_expression(statement);
+      ir_generate_for_expression(init, function_end_label, inner_loop_end_label);
+      ir_generate_for_expression(statement, function_end_label, inner_loop_end_label);
     statement_list->ir = ir_concatenate(init->ir, statement->ir);
   } else {
-    ir_generate_for_expression(statement);
+      ir_generate_for_expression(statement, function_end_label, inner_loop_end_label);
     statement_list->ir = statement->ir;
   }
 }
 
-void ir_generate_for_expression(struct node *expression) {
+void ir_generate_for_expression(struct node *expression,
+                                   struct ir_instruction *function_end_label,
+                                   struct ir_instruction *inner_loop_end_label) {
     struct ir_instruction *no_op_instruction;
   switch (expression->kind) {
     case NODE_IDENTIFIER:
@@ -1220,15 +1261,17 @@ void ir_generate_for_expression(struct node *expression) {
       break;
     case NODE_FUNCTION_DEFINITION:
       ir_generate_for_function_definition(expression);
+      next_temporary = 0;
       break;
    case NODE_COMPOUND_STATEMENT:
-      ir_generate_for_compound_statement(expression);
+     ir_generate_for_compound_statement(expression, function_end_label, inner_loop_end_label);
       break;
     case NODE_STATEMENT:
-      ir_generate_for_statement(expression);
+      ir_generate_for_statement(expression, function_end_label, inner_loop_end_label);
+      next_temporary = 0;
       break;
     case NODE_STATEMENT_LIST:
-      ir_generate_for_statement_list(expression);
+      ir_generate_for_statement_list(expression, function_end_label, inner_loop_end_label);
       break;
     case NODE_EXPR:
       ir_generate_for_expr(expression);
@@ -1238,7 +1281,7 @@ void ir_generate_for_expression(struct node *expression) {
       assert(0);
       break;
     case NODE_IF_STATEMENT:
-      ir_generate_for_if_statement(expression);
+      ir_generate_for_if_statement(expression, function_end_label, inner_loop_end_label);
       break;
     case NODE_FUNCTION_CALL:
       ir_generate_for_function_call(expression);
@@ -1266,10 +1309,10 @@ void ir_generate_for_translation_unit(struct node *translation_unit) {
       printf("Translation Unit kind: %d\n", translation_unit_within->kind);
     ir_generate_for_translation_unit(translation_unit_within);
     printf("Top level decl kind: %d\n", top_level_decl == NULL);
-    ir_generate_for_expression(top_level_decl);
+    ir_generate_for_expression(top_level_decl, NULL, NULL);
     translation_unit->ir = ir_concatenate(translation_unit_within->ir, top_level_decl->ir);
   } else {
-    ir_generate_for_expression(top_level_decl);
+      ir_generate_for_expression(top_level_decl, NULL, NULL);
     translation_unit->ir = top_level_decl->ir;
   }
 }

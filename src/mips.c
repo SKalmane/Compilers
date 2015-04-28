@@ -152,26 +152,29 @@ void mips_print_print_number(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, "\n%10s\n", "syscall");
 }
 
-bool need_to_allocate_memory_for_identifier(char **local_variables, 
-                                            char *identifier) {
+bool need_to_allocate_memory_for_identifier(char local_variables[10][MAX_IDENTIFIER_LENGTH], 
+                                            char *identifier,
+                                            int *number_of_identifiers_stored) {
     int i = 0;
     bool string_already_present = false;
-    while(local_variables[i] != NULL) {
-        if(strcmp(local_variables[i], identifier)) {
+    while(i < 10) {
+        if(!strcmp(local_variables[i], identifier)) {
             string_already_present = true;
             break;
         }
         i++;
     }
     if(!string_already_present) {
-        strncpy(local_variables[i], identifier, MAX_IDENTIFIER_LENGTH);
+        strcpy(local_variables[*number_of_identifiers_stored], identifier);
     }
+    (*number_of_identifiers_stored)++;
     return !string_already_present;
 }
 
 void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     struct ir_instruction *temp_instruction = instruction;
-    char **local_variables;
+    char local_variables[10][MAX_IDENTIFIER_LENGTH];
+    int i, number_of_identifiers_stored = 0;
 
     /* To start off, we need storage space for:
      * 1.  s0 to s7 (32 bytes),
@@ -182,9 +185,12 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
      * The minimum space needed = 60 bytes
      */
     int number_of_bytes_for_frame = 60;
+    int word_aligned_number_of_bytes;
 
-    local_variables = malloc( 10* sizeof(char *));
-
+    for(i = 0; i < 10; i++) {
+        strcpy(local_variables[i], "");
+    }
+    
     /* Now, find out the additional of memory needed for the function */
     while(temp_instruction->kind != IR_FUNCTION_END) {
         temp_instruction = temp_instruction->next;
@@ -192,11 +198,14 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
             (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
             if(need_to_allocate_memory_for_identifier(
                    local_variables,
-                   temp_instruction->operands[1].data.identifier_name)) {
+                   temp_instruction->operands[1].data.identifier_name,
+                   &number_of_identifiers_stored)) {
                 number_of_bytes_for_frame += 4;
             }
         }
     }
+
+    word_aligned_number_of_bytes = (((number_of_bytes_for_frame + 7) >> 3) << 3);
 
     /* First, print out the label corresponding to this function name in the
      * mips file */
@@ -205,7 +214,7 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     fputs(":\n", output);
 
     /* Print all the stack frame related instructions */
-    fprintf(output, "%10s %10s, %10s, %10d\n", "addi", "$sp", "$sp", -(number_of_bytes_for_frame));
+    fprintf(output, "%10s %10s, %10s, %10d\n", "addi", "$sp", "$sp", -(word_aligned_number_of_bytes));
     /* Store the old frame pointer */
     fprintf(output, "%10s %10s, %10s\n", "sw", "$fp", "52($sp)");
     /* Save the return address */

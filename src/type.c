@@ -347,10 +347,16 @@ struct type * apply_usual_arithmetic_binary_conversion(struct type *left,
         break;
       case CONVERSION_RANK_INT:
         width = TYPE_WIDTH_INT;
+        break;
       case CONVERSION_RANK_SHORT:
         assert(0); printf("ERROR: Conversion rank should be INT or higher\n");
+        break;
       case CONVERSION_RANK_CHAR:
         assert(0); printf("ERROR: Conversion rank should be INT or higher\n");
+        break;
+      default:
+        assert(0);
+        break;
     }
 
     if(are_both_unsigned || are_both_signed) {
