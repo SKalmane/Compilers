@@ -15,6 +15,14 @@
 #define LAST_USABLE_REGISTER  23
 #define NUM_REGISTERS         32
 
+/* 
+ * Change the IR to print the address of an identifier, not the name of the identifier
+ * Create IR_NO_OPERATION instruction if we see an error
+ * Simple optimization: multiply power of 2 - shiftleft that many bits
+ * load immediate can be replaced by 'binary operation immediate'
+ * add of 0(multiply of 1) can be replaced by no-op (need to remember the register correctly)
+ * multiply of 0 can be replaced by no-op
+ */
 
 /****************************
  * MIPS TEXT SECTION OUTPUT *
