@@ -9,12 +9,16 @@
 
 int symbol_table_num_errors;
 
+/* Labels - adding proper symbols for labels 
+ */
+
 void symbol_initialize_table(struct symbol_table *table,
     int type_of_symbol_table) {
   table->variables = NULL;
   table->type_of_symbol_table = type_of_symbol_table;
   table->statement_labels = NULL;
   table->parent_symbol_table = NULL;
+  table->total_stack_offset = 0;
 }
 
 /**********************************************
@@ -48,6 +52,9 @@ struct symbol *symbol_put(struct symbol_table **table, char name[],
   symbol_list->symbol.result.type = type;
   symbol_list->symbol.result.ir_operand = NULL;
 
+  symbol_list->symbol.owner_symbol_table = (*table);
+  symbol_list->symbol.stack_offset = STACK_OFFSET_NOT_YET_DEFINED;
+
   symbol_list->next = (*table)->variables;
   (*table)->variables = symbol_list;
 
@@ -74,7 +81,7 @@ struct symbol *symbol_put_labels(struct symbol_table *table, char name[],
   strncpy(symbol_list->symbol.name, name, MAX_IDENTIFIER_LENGTH);
   symbol_list->symbol.result.type = type;
   symbol_list->symbol.result.ir_operand = NULL;
-
+  symbol_list->symbol.stack_offset = STACK_OFFSET_NOT_YET_DEFINED;
   symbol_list->next = table->statement_labels;
   table->statement_labels = symbol_list;
 

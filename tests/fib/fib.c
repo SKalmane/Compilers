@@ -3,11 +3,17 @@ void print_string(char *s);
 int atoi(char *s);
 
 int fib(int n) {
-  return (n < 2 ? n : fib(n - 1) + fib(n - 2));
+    int a;
+    int b;
+    char *c;
+    a = fib(n-1);
+    b = fib(n-2);
+    return (n < (int)2 ? n : (a + b));
 }
 
 int main(int argc, char *argv[]) {
   print_int(fib(atoi(argv[1])));
-  print_string("\\n");
+  print_string("Hello");
+  print_string("\n");
   return 0;
 }

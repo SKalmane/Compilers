@@ -22,7 +22,10 @@ struct ir_operand {
   union {
       unsigned long number;
       int temporary;
-      char identifier_name[MAX_IDENTIFIER_LENGTH+1];
+      struct {
+          char identifier_name[MAX_IDENTIFIER_LENGTH+1];
+          struct symbol *symbol;
+      } identifier;
       int generated_label;
       struct {
           int generated_label;

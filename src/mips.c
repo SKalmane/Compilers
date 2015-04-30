@@ -43,7 +43,7 @@ void mips_print_number_operand(FILE *output, struct ir_operand *operand) {
 void mips_print_identifier_operand(FILE *output, struct ir_operand *operand) {
   assert(OPERAND_IDENTIFIER == operand->kind);
 
-  fprintf(output, "%s", operand->data.identifier_name);
+  fprintf(output, "%s", operand->data.identifier.identifier_name);
 }
 
 void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
@@ -203,12 +203,12 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     while(temp_instruction->kind != IR_FUNCTION_END) {
         temp_instruction = temp_instruction->next;
         if((temp_instruction->kind == IR_ADDRESS_OF) &&
-            (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
+           (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
             if(need_to_allocate_memory_for_identifier(
                    local_variables,
-                   temp_instruction->operands[1].data.identifier_name,
+                   temp_instruction->operands[1].data.identifier.identifier_name,
                    &number_of_identifiers_stored)) {
-                number_of_bytes_for_frame += 4;
+                number_of_bytes_for_frame += temp_instruction->operands[1].data.identifier.symbol->stack_offset;
             }
         }
     }

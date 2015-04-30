@@ -551,6 +551,14 @@ void type_convert_scalar_compound_assignment(struct node *binary_operation) {
     type_convert_assignment(binary_operation);
 }
 
+void type_assign_in_ternary_operation(struct node *ternary_operation) {
+  assert(NODE_TERNARY_OPERATION == ternary_operation->kind);
+  type_assign_in_expression(ternary_operation->data.ternary_operation.first_operand);
+  type_assign_in_expression(ternary_operation->data.ternary_operation.second_operand);
+  type_assign_in_expression(ternary_operation->data.ternary_operation.third_operand);
+  /* xxx: Unsure whether we need to do any casting conversions here */
+}
+
 void type_assign_in_binary_operation(struct node *binary_operation) {
   assert(NODE_BINARY_OPERATION == binary_operation->kind);
   type_assign_in_expression(binary_operation->data.binary_operation.left_operand);

@@ -100,10 +100,50 @@ static void ir_operand_number(struct ir_instruction *instruction, int position, 
   instruction->operands[position].data.number = number->data.number.value;
 }
 
+static void assign_stack_offsets_to_variables(struct node *identifier) {
+    struct type *type = node_get_result(identifier)->type;
+    struct symbol *symbol = identifier->data.identifier.symbol;
+    struct symbol_table *table = symbol->owner_symbol_table;
+    if(((table->type_of_symbol_table == FUNCTION_SCOPE_SYMBOL_TABLE) ||
+        (table->type_of_symbol_table == BLOCK_SCOPE_SYMBOL_TABLE)) && 
+       (symbol->stack_offset == STACK_OFFSET_NOT_YET_DEFINED)) {
+        printf("Assigning stack offsets to variables.. \n Stack offset at present: %d\n", 
+               table->total_stack_offset);
+        switch (type->kind) {
+          case TYPE_BASIC:
+            printf("Identifier name: %s\n", 
+                   identifier->data.identifier.name);            
+            symbol->stack_offset = table->total_stack_offset;
+            table->total_stack_offset += type->data.basic.width;
+            break;
+          case TYPE_POINTER:
+            symbol->stack_offset = table->total_stack_offset;
+            table->total_stack_offset += TYPE_WIDTH_POINTER;          
+            break;
+          case TYPE_ARRAY:
+            symbol->stack_offset = table->total_stack_offset;
+            table->total_stack_offset += type->data.array.array_size;          
+            break;
+          case TYPE_VOID:
+            /* Not sure if we can have a pure void type */
+          case TYPE_FUNCTION:
+            /* We can't have a function definition within a function */          
+          case TYPE_LABEL:
+            /* Label symbol changes need to go through symbol_put_labels */
+          default:
+            assert(0);
+            break;
+        }
+    }
+}
+
 static void ir_operand_identifier(struct ir_instruction *instruction, int position, struct node *identifier) {
   instruction->operands[position].kind = OPERAND_IDENTIFIER;
-  strncpy(instruction->operands[position].data.identifier_name, identifier->data.identifier.name,
+  strncpy(instruction->operands[position].data.identifier.identifier_name, identifier->data.identifier.name,
           MAX_IDENTIFIER_LENGTH);
+
+  instruction->operands[position].data.identifier.symbol = identifier->data.identifier.symbol;
+  assign_stack_offsets_to_variables(identifier);
 }
 
 static void ir_operand_temporary(struct ir_instruction *instruction, int position) {
@@ -1396,7 +1436,9 @@ static void ir_print_operand(FILE *output, struct ir_operand *operand) {
       fprintf(output, "     t%04d", operand->data.temporary);
       break;
     case OPERAND_IDENTIFIER:
-      fprintf(output, "     %5s", operand->data.identifier_name);
+      fprintf(output, "     %p     %s   %d", (void *)operand->data.identifier.symbol, 
+              operand->data.identifier.identifier_name,
+              operand->data.identifier.symbol->stack_offset);
       break;
     case OPERAND_GENERATED_LABEL:
       fprintf(output, "     __GeneratedLabel_%04d", operand->data.generated_label);
