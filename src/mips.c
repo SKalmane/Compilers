@@ -247,6 +247,35 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
 
 }
 
+void mips_print_load_address(FILE *output, struct ir_instruction *instruction) {
+  int stack_offset = 60;
+  fprintf(output, "%10s ", "la");
+  mips_print_temporary_operand(output, &instruction->operands[0]);
+  fputs(", ", output);
+  stack_offset += instruction->operands[1].data.identifier.symbol->stack_offset;
+  fprintf(output, "   %d($fp)\n", stack_offset);
+}
+
+void mips_print_load_word(FILE *output, struct ir_instruction *instruction) {
+  fprintf(output, "%10s ", "lw");
+  mips_print_temporary_operand(output, &instruction->operands[0]);
+  fputs(", ", output);
+  mips_print_temporary_operand(output, &instruction->operands[1]);
+  fprintf(output, "\n");
+}
+
+void mips_print_function_parameter(FILE *output, struct ir_instruction *instruction) {
+  fprintf(output, "%10s ", "or");
+  fprintf(output, "%9s%lu", "$a", instruction->operands[0].data.number);
+  fputs(", ", output);
+  mips_print_temporary_operand(output, &instruction->operands[1]);
+  fprintf(output, ", %10s\n", "$0");
+}
+
+void mips_print_function_call(FILE *output, struct ir_instruction *instruction) {
+  /* Save all the t registers*/
+}
+
 void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
   switch (instruction->kind) {
     case IR_MULTIPLY:
@@ -270,6 +299,15 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
 
     case IR_FUNCTION_BEGIN:
       mips_print_function(output, instruction);
+      break;
+  case IR_ADDRESS_OF:
+      mips_print_load_address(output, instruction);
+      break;
+  case IR_LOAD_WORD:
+      mips_print_load_word(output, instruction);
+      break;
+  case IR_FUNCTION_PARAMETER:
+      mips_print_function_parameter(output, instruction);
       break;
     case IR_NO_OPERATION:
       break;
