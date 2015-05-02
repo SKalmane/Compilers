@@ -179,8 +179,8 @@ static void ir_operand_copy(struct ir_instruction *instruction, int position, st
 
 static void ir_generate_gotoFalseOrTrue(struct ir_instruction *instruction, struct ir_operand *ir_operand,
                                     struct ir_instruction *label_instruction) {
-    ir_operand_copy(instruction, 1, ir_operand);
-    ir_operand_copy(instruction, 0, &label_instruction->operands[0]);
+    ir_operand_copy(instruction, 0, ir_operand);
+    ir_operand_copy(instruction, 1, &label_instruction->operands[0]);
 }
 
 static void ir_generate_goto(struct ir_instruction *instruction, struct ir_instruction *label_instruction) {
@@ -305,7 +305,7 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
       ir_generate_for_conversion_to_rvalue(binary_operation->data.binary_operation.right_operand);
   }
 
-  instruction = ir_instruction(IR_COPY);
+  instruction = ir_instruction(IR_STORE_WORD);
 
   ir_operand_copy(instruction, 0,
                   node_get_result(left)->ir_operand);
@@ -342,7 +342,7 @@ void ir_generate_for_compound_assignment(int kind, struct node *binary_operation
   }
   binary_operation->ir = ir_concatenate(binary_operation->ir, left->ir);
 
-  instruction = ir_instruction(IR_COPY);
+  instruction = ir_instruction(IR_STORE_WORD);
 
   ir_operand_copy(instruction, 0,
                   node_get_result(left)->ir_operand);
@@ -386,7 +386,7 @@ void ir_generate_for_ternary_operation(struct node *ternary_operation) {
         ir_generate_for_conversion_to_rvalue(second_operand);
     }
 
-    storeword_instruction1 = ir_instruction(IR_STORE_WORD);
+    storeword_instruction1 = ir_instruction(IR_COPY);
     ir_operand_temporary(storeword_instruction1, 0);
     ir_operand_copy(storeword_instruction1, 1,
                     node_get_result(second_operand)->ir_operand);
@@ -399,7 +399,7 @@ void ir_generate_for_ternary_operation(struct node *ternary_operation) {
         ir_generate_for_conversion_to_rvalue(third_operand);
     }
 
-    storeword_instruction2 = ir_instruction(IR_STORE_WORD);
+    storeword_instruction2 = ir_instruction(IR_COPY);
     ir_operand_copy(storeword_instruction2, 0,
                     &storeword_instruction1->operands[0]);
     ir_operand_copy(storeword_instruction2, 1,
@@ -664,31 +664,120 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
     node_get_result(unary_operation)->ir_operand = node_get_result(the_operand)->ir_operand;
 }
 
+int get_type_is_unsigned(struct type *type) {
+    bool expr_is_unsigned;
+    switch(type->kind) {
+      case TYPE_BASIC:
+        expr_is_unsigned = type->data.basic.is_unsigned;
+        break;
+      case TYPE_POINTER:
+        expr_is_unsigned = true;
+        break;
+      case TYPE_ARRAY:
+        expr_is_unsigned = get_type_is_unsigned(type->data.array.array_type);
+        break;
+      case TYPE_FUNCTION:
+        expr_is_unsigned = get_type_is_unsigned(type->data.function.return_type);
+        break;
+      case TYPE_LABEL:
+        printf("Cannot cast a label. Incorrect Syntax\n");
+      case TYPE_VOID:
+      default:
+        assert(0);
+        break;
+    }
+    return expr_is_unsigned;
+}
+
+int get_width_of_type(struct type *type) {
+    int width_of_expr;
+    switch(type->kind) {
+      case TYPE_BASIC:
+        width_of_expr = type->data.basic.width;
+        break;
+      case TYPE_POINTER:
+        width_of_expr = TYPE_WIDTH_POINTER;
+        break;
+      case TYPE_ARRAY:
+        width_of_expr = get_width_of_type(type->data.array.array_type);
+        break;
+      case TYPE_FUNCTION:
+        width_of_expr = get_width_of_type(type->data.function.return_type);
+        break;
+      case TYPE_LABEL:
+        printf("Cannot cast a label. Incorrect Syntax\n");
+      case TYPE_VOID:
+      default:
+        assert(0);
+        break;
+    }
+    return width_of_expr;
+}
+
 void ir_generate_for_unary_casting_expr(struct ir_operand *ir_operand, 
-                                        struct node *unary_casting_expr) {
+                                        struct node *unary_casting_expr,
+                                        struct type *type_of_expr) {
     struct node *the_operand = unary_casting_expr->data.unary_operation.the_operand;
     struct ir_instruction *instruction;
+    int width_of_expr = get_width_of_type(type_of_expr);
+
     if(the_operand->kind == NODE_TYPE_SPECIFIER) {
         switch(the_operand->data.type_specifier.kind_of_type_specifier) {
           case UNSIGNED_CHARACTER_TYPE:
-            instruction = ir_instruction(IR_CAST_TO_U_BYTE);
+            if(width_of_expr == 4) {
+                instruction = ir_instruction(IR_CAST_WORD_TO_U_BYTE);
+            } else if(width_of_expr == 2) {
+                instruction = ir_instruction(IR_CAST_HWORD_TO_U_BYTE);
+            } else {
+                instruction = ir_instruction(IR_NO_OPERATION);
+            }
             break;
           case SIGNED_CHARACTER_TYPE:
-            instruction = ir_instruction(IR_CAST_TO_S_BYTE);
+            if(width_of_expr == 4) {
+                instruction = ir_instruction(IR_CAST_WORD_TO_S_BYTE);
+            } else if(width_of_expr == 2) {
+                instruction = ir_instruction(IR_CAST_HWORD_TO_S_BYTE);
+            } else {
+                instruction = ir_instruction(IR_NO_OPERATION);
+            }
             break;
           case UNSIGNED_SHORT_INT:
-            instruction = ir_instruction(IR_CAST_TO_U_HALFWORD);
+            if(width_of_expr == 4) {
+                instruction = ir_instruction(IR_CAST_WORD_TO_U_HWORD);
+            } else if(width_of_expr == 1) {
+                instruction = ir_instruction(IR_CAST_BYTE_TO_U_HWORD);
+            } else {
+                instruction = ir_instruction(IR_NO_OPERATION);
+            }
             break;
           case SIGNED_SHORT_INT:
-            instruction = ir_instruction(IR_CAST_TO_S_HALFWORD);
+            if(width_of_expr == 4) {
+                instruction = ir_instruction(IR_CAST_WORD_TO_S_HWORD);
+            } else if(width_of_expr == 1) {
+                instruction = ir_instruction(IR_CAST_BYTE_TO_S_HWORD);
+            } else {
+                instruction = ir_instruction(IR_NO_OPERATION);
+            }
             break;
           case UNSIGNED_LONG_INT:
           case UNSIGNED_INT:
-            instruction = ir_instruction(IR_CAST_TO_U_WORD);
+            if(width_of_expr == 2) {
+                instruction = ir_instruction(IR_CAST_HWORD_TO_U_WORD);
+            } else if(width_of_expr == 1) {
+                instruction = ir_instruction(IR_CAST_BYTE_TO_U_WORD);
+            } else {
+                instruction = ir_instruction(IR_NO_OPERATION);
+            }
             break;
           case SIGNED_LONG_INT:
           case SIGNED_INT:
-            instruction = ir_instruction(IR_CAST_TO_S_WORD);
+            if(width_of_expr == 2) {
+                instruction = ir_instruction(IR_CAST_HWORD_TO_S_WORD);
+            } else if(width_of_expr == 1) {
+                instruction = ir_instruction(IR_CAST_BYTE_TO_S_WORD);
+            } else {
+                instruction = ir_instruction(IR_NO_OPERATION);
+            }
             break;
           case VOID_TYPE:
             ir_generation_num_errors++;
@@ -701,14 +790,20 @@ void ir_generate_for_unary_casting_expr(struct ir_operand *ir_operand,
         }
     } else {
         /* There is an abstract declarator involved, it is a pointer type */
-        instruction = ir_instruction(IR_CAST_TO_U_WORD);
+        instruction = ir_instruction(IR_CAST_BYTE_TO_U_WORD);
     }
-    ir_operand_temporary(instruction, 0);
-    ir_operand_copy(instruction, 1, ir_operand);
-    ir_append(the_operand->ir, instruction);
-    unary_casting_expr->ir = ir_section(instruction, instruction);
-    node_get_result(unary_casting_expr)->ir_operand = &instruction->operands[0];
-    node_get_result(unary_casting_expr)->ir_operand->lvalue = false;
+    if(instruction->kind != IR_NO_OPERATION) {
+        ir_operand_temporary(instruction, 0);
+        ir_operand_copy(instruction, 1, ir_operand);
+        ir_append(the_operand->ir, instruction);
+        unary_casting_expr->ir = ir_section(instruction, instruction);
+        node_get_result(unary_casting_expr)->ir_operand = &instruction->operands[0];
+        node_get_result(unary_casting_expr)->ir_operand->lvalue = false;
+    } else {
+        unary_casting_expr->ir = ir_section(instruction, instruction);
+        node_get_result(unary_casting_expr)->ir_operand = ir_operand;
+        node_get_result(unary_casting_expr)->ir_operand->lvalue = ir_operand->lvalue;
+    }
 }
 
 void ir_generate_for_cast_expr(struct node *cast_expr) {
@@ -718,10 +813,9 @@ void ir_generate_for_cast_expr(struct node *cast_expr) {
     ir_generate_for_expression(cast_expr_within, NULL, NULL);
 
     ir_generate_for_unary_casting_expr(node_get_result(cast_expr_within)->ir_operand, 
-                                       unary_casting_expr);
+                                       unary_casting_expr, node_get_result(cast_expr_within)->type);
     cast_expr->ir = ir_concatenate(cast_expr_within->ir, unary_casting_expr->ir);
     node_get_result(cast_expr)->ir_operand = node_get_result(unary_casting_expr)->ir_operand;
-    node_get_result(cast_expr)->ir_operand->lvalue = false;
 }
 
 void ir_generate_for_binary_operation(struct node *binary_operation) {
@@ -973,15 +1067,16 @@ void ir_generate_for_expr(struct node *expr) {
 void ir_generate_for_expression_statement(struct node *expression_statement,
                                           struct ir_instruction *function_end_label,
                                           struct ir_instruction *inner_loop_end_label) {
-  struct ir_instruction *instruction;
+    /* xxx: Commenting out the print_int instruction for now */
+  /* struct ir_instruction *instruction; */
   struct node *expression = expression_statement->data.statement.expression;
   assert(NODE_STATEMENT == expression_statement->kind);
   ir_generate_for_expression(expression, function_end_label, inner_loop_end_label);
-  instruction = ir_instruction(IR_PRINT_NUMBER);
-  ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand);
+  /* instruction = ir_instruction(IR_PRINT_NUMBER); */
+  /* ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand); */
 
   expression_statement->ir = ir_copy(expression_statement->data.statement.expression->ir);
-  ir_append(expression_statement->ir, instruction);
+  /* ir_append(expression_statement->ir, instruction); */
 }
 
 void ir_generate_for_return_statement(struct node *return_statement,
@@ -1219,8 +1314,9 @@ void ir_generate_for_statement(struct node *statement,
   assert(NODE_STATEMENT == statement->kind);
   switch(statement->data.statement.type_of_statement) {
     case EXPRESSION_STATEMENT_TYPE:
+      /* useful later. Commenting for now */
       ir_generate_for_expression_statement(statement,
-                                           function_end_label, 
+                                           function_end_label,
                                            inner_loop_end_label);
       break;
     case WHILE_STATEMENT_TYPE:
@@ -1420,6 +1516,18 @@ static void ir_print_opcode(FILE *output, int kind) {
     "CASTSBYTE",
     "PARAMETER",
     "RESULWORD",
+    "CASTWTOUB",
+    "CASTWTOSB",
+    "CASTHWTOUB",
+    "CASTHWTOSB",
+    "CASTHWTOUW",
+    "CASTHWTOSW",
+    "CASTBTOUW",
+    "CASTBTOSW",
+    "CASTWTOUHW",
+    "CASTWTOSHW",
+    "CASTBTOUHW",
+    "CASTBTOSHW",
     NULL
   };
 
@@ -1493,12 +1601,18 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_NEGATION:
     case IR_GOTO_IF_FALSE:
     case IR_GOTO_IF_TRUE:
-    case IR_CAST_TO_U_WORD:
-    case IR_CAST_TO_S_WORD:
-    case IR_CAST_TO_U_HALFWORD:
-    case IR_CAST_TO_S_HALFWORD:
-    case IR_CAST_TO_U_BYTE:
-    case IR_CAST_TO_S_BYTE:
+    case IR_CAST_WORD_TO_U_BYTE:
+    case IR_CAST_WORD_TO_S_BYTE:
+    case IR_CAST_HWORD_TO_U_BYTE:
+    case IR_CAST_HWORD_TO_S_BYTE:
+    case IR_CAST_HWORD_TO_U_WORD:
+    case IR_CAST_HWORD_TO_S_WORD:
+    case IR_CAST_BYTE_TO_U_WORD:
+    case IR_CAST_BYTE_TO_S_WORD:
+    case IR_CAST_WORD_TO_U_HWORD:
+    case IR_CAST_WORD_TO_S_HWORD:
+    case IR_CAST_BYTE_TO_U_HWORD:
+    case IR_CAST_BYTE_TO_S_HWORD:
     case IR_FUNCTION_PARAMETER:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");

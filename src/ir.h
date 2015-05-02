@@ -79,6 +79,18 @@ struct ir_operand {
 #define IR_CAST_TO_S_BYTE         43
 #define IR_FUNCTION_PARAMETER     44
 #define IR_RESULTWORD             45
+#define IR_CAST_WORD_TO_U_BYTE    46
+#define IR_CAST_WORD_TO_S_BYTE    47
+#define IR_CAST_HWORD_TO_U_BYTE   48
+#define IR_CAST_HWORD_TO_S_BYTE   49
+#define IR_CAST_HWORD_TO_U_WORD   50
+#define IR_CAST_HWORD_TO_S_WORD   51
+#define IR_CAST_BYTE_TO_U_WORD    52
+#define IR_CAST_BYTE_TO_S_WORD    53
+#define IR_CAST_WORD_TO_U_HWORD   54
+#define IR_CAST_WORD_TO_S_HWORD   55
+#define IR_CAST_BYTE_TO_U_HWORD   56
+#define IR_CAST_BYTE_TO_S_HWORD   57
 
 struct ir_instruction {
   int kind;

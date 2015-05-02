@@ -15,7 +15,7 @@
 #define LAST_USABLE_REGISTER  23
 #define NUM_REGISTERS         32
 
-/* 
+/*
  * Change the IR to print the address of an identifier, not the name of the identifier
  * Create IR_NO_OPERATION instruction if we see an error
  * Simple optimization: multiply power of 2 - shiftleft that many bits
@@ -44,6 +44,18 @@ void mips_print_identifier_operand(FILE *output, struct ir_operand *operand) {
   assert(OPERAND_IDENTIFIER == operand->kind);
 
   fprintf(output, "%s", operand->data.identifier.identifier_name);
+}
+
+void mips_print_generated_label(FILE *output, struct ir_operand *operand) {
+  assert(OPERAND_GENERATED_LABEL == operand->kind);
+
+  fprintf(output, "__GeneratedLabel_%04d", operand->data.generated_label);
+}
+
+void mips_print_generated_string_label(FILE *output, struct ir_operand *operand) {
+  assert(OPERAND_STRING == operand->kind);
+
+  fprintf(output, "__GeneratedStringLabel_%04d", operand->data.string_label.generated_label);
 }
 
 void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
@@ -120,6 +132,16 @@ void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
     "divu",
     "addu",
     "subu",
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    "sltu",
     NULL
   };
   fprintf(output, "%10s ", opcodes[instruction->kind]);
@@ -160,7 +182,7 @@ void mips_print_print_number(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, "\n%10s\n", "syscall");
 }
 
-bool need_to_allocate_memory_for_identifier(char local_variables[10][MAX_IDENTIFIER_LENGTH], 
+bool need_to_allocate_memory_for_identifier(char local_variables[10][MAX_IDENTIFIER_LENGTH],
                                             char *identifier,
                                             int *number_of_identifiers_stored) {
     int i = 0;
@@ -181,8 +203,6 @@ bool need_to_allocate_memory_for_identifier(char local_variables[10][MAX_IDENTIF
 
 void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     struct ir_instruction *temp_instruction = instruction;
-    char local_variables[10][MAX_IDENTIFIER_LENGTH];
-    int i, number_of_identifiers_stored = 0;
 
     /* To start off, we need storage space for:
      * 1.  s0 to s7 (32 bytes),
@@ -195,21 +215,14 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     int number_of_bytes_for_frame = 60;
     int word_aligned_number_of_bytes;
 
-    for(i = 0; i < 10; i++) {
-        strcpy(local_variables[i], "");
-    }
-    
     /* Now, find out the additional of memory needed for the function */
     while(temp_instruction->kind != IR_FUNCTION_END) {
         temp_instruction = temp_instruction->next;
         if((temp_instruction->kind == IR_ADDRESS_OF) &&
            (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
-            if(need_to_allocate_memory_for_identifier(
-                   local_variables,
-                   temp_instruction->operands[1].data.identifier.identifier_name,
-                   &number_of_identifiers_stored)) {
-                number_of_bytes_for_frame += temp_instruction->operands[1].data.identifier.symbol->stack_offset;
-            }
+            number_of_bytes_for_frame += 
+                temp_instruction->operands[1].data.identifier.symbol->owner_symbol_table->total_stack_offset;
+            break;
         }
     }
 
@@ -252,16 +265,32 @@ void mips_print_load_address(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, "%10s ", "la");
   mips_print_temporary_operand(output, &instruction->operands[0]);
   fputs(", ", output);
-  stack_offset += instruction->operands[1].data.identifier.symbol->stack_offset;
-  fprintf(output, "   %d($fp)\n", stack_offset);
+  if(instruction->operands[1].kind == OPERAND_IDENTIFIER) {
+      stack_offset += instruction->operands[1].data.identifier.symbol->stack_offset;
+      fprintf(output, "   %d($fp)\n", stack_offset);
+  } else {
+      assert(instruction->operands[1].kind == OPERAND_STRING);
+      mips_print_generated_string_label(output, &instruction->operands[1]);
+      fprintf(output, "\n");
+  }
 }
 
 void mips_print_load_word(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, "%10s ", "lw");
   mips_print_temporary_operand(output, &instruction->operands[0]);
-  fputs(", ", output);
+  assert(OPERAND_TEMPORARY == instruction->operands[1].kind);
+
+  fprintf(output, "%9s%02d", "0($", instruction->operands[1].data.temporary + FIRST_USABLE_REGISTER);
+  fprintf(output, ")\n");
+}
+
+void mips_print_store_word(FILE *output, struct ir_instruction *instruction) {
+  fprintf(output, "%10s ", "sw");
   mips_print_temporary_operand(output, &instruction->operands[1]);
-  fprintf(output, "\n");
+  assert(OPERAND_TEMPORARY == instruction->operands[1].kind);
+  fputs(", ", output);
+  fprintf(output, "%8s%02d", "0($", instruction->operands[0].data.temporary + FIRST_USABLE_REGISTER);
+  fprintf(output, ")\n");
 }
 
 void mips_print_function_parameter(FILE *output, struct ir_instruction *instruction) {
@@ -274,6 +303,129 @@ void mips_print_function_parameter(FILE *output, struct ir_instruction *instruct
 
 void mips_print_function_call(FILE *output, struct ir_instruction *instruction) {
   /* Save all the t registers*/
+    char *function_name = instruction->operands[0].data.identifier.identifier_name;
+    bool isSysFcnCall = (!strcmp(function_name, "print_int") ||
+                         !strcmp(function_name, "read_int") ||
+                         !strcmp(function_name, "read_string") ||
+                         !strcmp(function_name, "print_string"));
+    if(!isSysFcnCall) {
+        fprintf(output, "%10s ", "jal");
+        fprintf(output, "%10s\n", function_name);
+    } else {
+        fprintf(output, "%10s ", "li");
+        if(!strcmp(function_name, "print_int")) {
+            fprintf(output, "%10s ", "$v0, ");
+            fprintf(output, "%10s ", "1");
+        } else if(!strcmp(function_name, "print_string")) {
+            fprintf(output, "%10s ", "$v0, ");
+            fprintf(output, "%10s ", "4");
+        } else if(!strcmp(function_name, "read_string")) {
+            /* xxx: The reads have more work to be done */
+        } else if(!strcmp(function_name, "read_int")) {
+            fprintf(output, "%10s ", "$v0, ");
+            fprintf(output, "%10s ", "5");
+        } else {
+            printf("Not a system function. Should not come here\n");
+            assert(0);
+                
+        }
+        fprintf(output, "\n%10s\n", "syscall");
+    }
+}
+
+void mips_print_result_word(FILE *output, struct ir_instruction *instruction) {
+    assert(IR_RESULTWORD == instruction->kind);
+    fprintf(output, "%10s ", "or");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    fprintf(output, "%12s", "$v0,");
+    fprintf(output, "%11s\n", "$0");
+}
+
+void mips_print_goto_if_false(FILE *output, struct ir_instruction *instruction) {
+    assert(IR_GOTO_IF_FALSE == instruction->kind);
+    fprintf(output, "%10s ", "beqz");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    mips_print_generated_label(output, &instruction->operands[1]);
+    fprintf(output, "\n");
+}
+
+void mips_print_goto_if_true(FILE *output, struct ir_instruction *instruction) {
+    assert(IR_GOTO_IF_TRUE == instruction->kind);
+    fprintf(output, "%10s ", "bnez");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    mips_print_generated_label(output, &instruction->operands[1]);
+    fprintf(output, "\n");
+}
+
+void mips_print_goto(FILE *output, struct ir_instruction *instruction) {
+    assert(IR_GOTO == instruction->kind);
+    fprintf(output, "%10s ", "b");
+    mips_print_generated_label(output, &instruction->operands[0]);
+    fprintf(output, "\n");
+}
+
+void mips_print_label(FILE *output, struct ir_instruction *instruction) {
+    assert(IR_GENERATED_LABEL == instruction->kind);
+    fprintf(output, "\n");
+    mips_print_generated_label(output, &instruction->operands[0]);
+    fprintf(output, ":\n");
+}
+
+void mips_print_return(FILE *output, struct ir_instruction *instruction) {
+    assert(IR_RETURN == instruction->kind);
+    fprintf(output, "%10s ", "or");
+    fprintf(output, "%11s", "$v0,");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    fprintf(output, "%11s\n", "$0");
+}
+
+void mips_print_function_end(FILE *output, struct ir_instruction *instruction) {
+    struct ir_instruction *temp_instruction = instruction;
+    int number_of_bytes_for_frame = 60;
+    int word_aligned_number_of_bytes;
+    assert(IR_FUNCTION_END == instruction->kind);
+
+    /* Restore the s-registers */
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s7", "48($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s6", "44($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s5", "40($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s4", "36($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s3", "32($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s2", "28($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s1", "24($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$s0", "20($fp)");
+
+    /* Restore the return address */
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$ra", "56($sp)");
+
+    /* Restore the old frame pointer */
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$fp", "52($sp)");
+
+    /* Now, find out the additional of memory needed for the function */
+    while(temp_instruction->kind != IR_FUNCTION_BEGIN) {
+        temp_instruction = temp_instruction->prev;
+        if(temp_instruction == NULL) {
+            printf("There should be a procbegin instruction here\n");
+            assert(0);
+        }
+        if((temp_instruction->kind == IR_ADDRESS_OF) &&
+           (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
+            number_of_bytes_for_frame += 
+                temp_instruction->operands[1].data.identifier.symbol->owner_symbol_table->total_stack_offset;
+            break;
+        }
+    }
+    word_aligned_number_of_bytes = (((number_of_bytes_for_frame + 7) >> 3) << 3);
+
+    /* Pop off the stack frame */
+    fprintf(output, "%10s %10s, %10s, %10d\n", "addi", "$sp", "$sp", (word_aligned_number_of_bytes));
+
+    /* Return to caller */
+    fprintf(output, "%10s %10s\n\n", "jr", "$ra");
 }
 
 void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
@@ -282,6 +434,7 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_DIVIDE:
     case IR_ADD:
     case IR_SUBTRACT:
+    case IR_LESS_THAN:
       mips_print_arithmetic(output, instruction);
       break;
 
@@ -300,14 +453,41 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_FUNCTION_BEGIN:
       mips_print_function(output, instruction);
       break;
+    case IR_FUNCTION_END:
+      mips_print_function_end(output, instruction);
+      break;
+    case IR_FUNCTION_CALL:
+      mips_print_function_call(output, instruction);
+      break;
   case IR_ADDRESS_OF:
       mips_print_load_address(output, instruction);
       break;
   case IR_LOAD_WORD:
       mips_print_load_word(output, instruction);
       break;
+  case IR_STORE_WORD:
+      mips_print_store_word(output, instruction);
+      break;
   case IR_FUNCTION_PARAMETER:
       mips_print_function_parameter(output, instruction);
+      break;
+  case IR_RESULTWORD:
+      mips_print_result_word(output, instruction);
+      break;
+    case IR_GOTO_IF_FALSE:
+      mips_print_goto_if_false(output, instruction);
+      break;
+    case IR_GOTO_IF_TRUE:
+      mips_print_goto_if_true(output, instruction);
+      break;
+    case IR_GOTO:
+      mips_print_goto(output, instruction);
+      break;
+    case IR_GENERATED_LABEL:
+      mips_print_label(output, instruction);
+      break;
+    case IR_RETURN:
+      mips_print_return(output, instruction);
       break;
     case IR_NO_OPERATION:
       break;
@@ -351,10 +531,10 @@ void mips_print_string_labels(FILE *output, struct ir_section *section) {
 
 void mips_print_text_section(FILE *output, struct ir_section *section) {
   struct ir_instruction *instruction;
-
+  fputs("\n.data", output);
   mips_print_string_labels(output, section);
 
-  fputs("\n.text\nmain:\n", output);
+  fputs("\n.text\n.globl main\n", output);
 
   for (instruction = section->first; instruction != section->last->next; instruction = instruction->next) {
     mips_print_instruction(output, instruction);
