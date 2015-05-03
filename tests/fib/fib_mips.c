@@ -1,14 +1,16 @@
 void print_int(int i);
 void print_string(char *s);
+int read_int(void);
 
 int fib(int n) {
-    return (n < (int)2 ? n : (fib(n-1) + fib(n-2)));
+    return (n < (int)2 ? 1 : (fib(n-1) + fib(n-2)));
 }
 
 int main(int argc, char *argv[]) {
   int x;
-  x = 10;
-  print_string("Hello! The fibonacci number for ");
+  print_string("Hi! Please enter a number:");
+  x = read_int();
+  print_string("The fibonacci number for ");
   print_int(x);
   print_string(" is: ");
   print_int(fib(x));

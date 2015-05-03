@@ -691,7 +691,9 @@ void node_print_parameter_decl(FILE *output, struct node *parameter_decl) {
     assert(NODE_PARAMETER_DECL == parameter_decl->kind);
     node_print_handler(output, parameter_decl->data.parameter_decl.type_specifier);
     fputs(" ", output);
-    node_print_handler(output, parameter_decl->data.parameter_decl.declarator);
+    if(NULL != parameter_decl->data.parameter_decl.declarator) {
+      node_print_handler(output, parameter_decl->data.parameter_decl.declarator);
+    }
 }
 
 void node_print_function_def_specifier(FILE *output, struct node *function_def_specifier) {
@@ -880,7 +882,7 @@ void node_print_cast_expr(FILE *output, struct node *cast_expr) {
 void node_print_function_call(FILE *output, struct node *function_call) {
     node_print_handler(output, function_call->data.function_call.postfix_expr);
     fputs("(", output);
-    if(NULL != function_call->data.function_call.postfix_expr) {
+    if(NULL != function_call->data.function_call.expression_list) {
         node_print_handler(output, function_call->data.function_call.expression_list);
     }
     fputs(") ", output);

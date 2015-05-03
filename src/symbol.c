@@ -10,6 +10,8 @@
 int symbol_table_num_errors;
 
 /* Labels - adding proper symbols for labels 
+ * Function def specifier - we assume that it has to be
+ * a function declarator - it can be pointer decl too
  */
 
 void symbol_initialize_table(struct symbol_table *table,
@@ -89,7 +91,8 @@ struct symbol *symbol_put_labels(struct symbol_table *table, char name[],
 }
 
 void symbol_add_to_function_parameter_list(struct type *function_type,
-                                           struct type *param_type) {
+                                           struct type *param_type,
+					   struct symbol_table *table) {
     struct symbol_list *symbol_list = malloc(sizeof(struct symbol_list));
     assert(NULL != symbol_list);
     symbol_list->symbol.result.type = param_type;
@@ -98,6 +101,10 @@ void symbol_add_to_function_parameter_list(struct type *function_type,
     function_type->data.function.parameter_list = symbol_list;
 
     function_type->data.function.number_of_parameters++;
+    if(table->variables != NULL) {
+      table->variables->symbol.stack_offset = -60 +
+	function_type->data.function.number_of_parameters*4;
+    }
 }
 
 void symbol_add_from_identifier(struct symbol_table **table, struct node *identifier,
@@ -391,7 +398,8 @@ void symbol_add_from_parameter_list(struct symbol_table *table,
         symbol_add_from_expression((*function_type)->data.function.function_symbol_table,
                                    parameter_list->data.parameter_list.parameter_decl, &parameter_type);
     }
-    symbol_add_to_function_parameter_list((*function_type), parameter_type);
+    symbol_add_to_function_parameter_list((*function_type), parameter_type,
+					  (*function_type)->data.function.function_symbol_table);
 }
 
 void symbol_add_from_function_declarator_from_definition(struct symbol_table *table,
@@ -596,6 +604,16 @@ void symbol_add_from_compound_statement(struct symbol_table *table, struct node 
     }
 }
 
+/* void set_stack_offsets_for_function_parameters(struct symbol_list *parameter_list, int number_of_parameters) { */
+/*   int param_num = 0; */
+/*   struct symbol_list *param = parameter_list; */
+/*   for (param_num = 0; param_num < number_of_parameters; param_num++) { */
+/*     printf("Param Stack Offset: %p\n",  (void *)&(param->symbol)); */
+/*     param->symbol.stack_offset = param_num*4; */
+/*     param = param->next; */
+/*   } */
+/* } */
+
 void symbol_add_from_function_definition(struct symbol_table *table, struct node *function_definition) {
     struct type *function_type = type_function(NULL);
     assert(NODE_FUNCTION_DEFINITION == function_definition->kind);
@@ -611,6 +629,9 @@ void symbol_add_from_function_definition(struct symbol_table *table, struct node
     /* We need to make sure we pass in the right symbol table here.. */
     symbol_add_from_compound_statement(function_type->data.function.function_symbol_table,
 				       function_definition->data.function_definition.compound_statement, true);
+
+    /* Set the stack offsets for the function parameters */
+    /* set_stack_offsets_for_function_parameters(function_type->data.function.function_symbol_table->variables, function_type->data.function.number_of_parameters); */
 
 }
 

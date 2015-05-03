@@ -1188,7 +1188,7 @@ void ir_generate_for_function_call(struct node *function_call) {
         function_call->ir = ir_copy(expression_list->ir);
     }
     ir_operand_identifier(instruction, 0, postfix_expr);
-    ir_append(function_call->ir, instruction);
+    function_call->ir = ir_append(function_call->ir, instruction);
     /* xxx: Need to implement ternary_operation's type assignment
      * if(node_get_result(function_call)->type->kind != TYPE_VOID) { */
         ir_operand_temporary(resultword_instruction, 0);

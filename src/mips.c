@@ -220,9 +220,9 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
         temp_instruction = temp_instruction->next;
         if((temp_instruction->kind == IR_ADDRESS_OF) &&
            (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
-            number_of_bytes_for_frame += 
-                temp_instruction->operands[1].data.identifier.symbol->owner_symbol_table->total_stack_offset;
-            break;
+	  number_of_bytes_for_frame += 
+	    temp_instruction->operands[1].data.identifier.symbol->owner_symbol_table->total_stack_offset;
+	  break;
         }
     }
 
@@ -279,7 +279,7 @@ void mips_print_load_word(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, "%10s ", "lw");
   mips_print_temporary_operand(output, &instruction->operands[0]);
   assert(OPERAND_TEMPORARY == instruction->operands[1].kind);
-
+  fputs(", ", output);
   fprintf(output, "%9s%02d", "0($", instruction->operands[1].data.temporary + FIRST_USABLE_REGISTER);
   fprintf(output, ")\n");
 }
