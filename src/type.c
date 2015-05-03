@@ -162,7 +162,9 @@ int type_is_scalar(struct type *t) {
 
 int node_is_lvalue(struct node *n) {
   assert(NULL != n);
-  return NODE_IDENTIFIER == n->kind;
+  return (NODE_IDENTIFIER == n->kind ||
+          ((NODE_UNARY_OPERATION == n->kind) &&
+           (n->data.unary_operation.operation == UNARYOP_INDIRECTION)));
 }
 
 int type_size(struct type *t) {
@@ -299,6 +301,28 @@ void apply_usual_array_unary_conversion(struct node *unary_operation) {
     /* After this step, we should not come across array type anywhere.. */
 }
 
+void type_assign_in_indirection_operation(struct node *unary_operation) {
+    struct node *the_operand = unary_operation->data.unary_operation.the_operand;
+    assert(NODE_UNARY_OPERATION == unary_operation->kind);
+    assert(UNARYOP_INDIRECTION == unary_operation->data.unary_operation.operation);
+    if(node_get_result(the_operand)->type->kind != TYPE_POINTER) {
+        type_checking_num_errors++; printf("ERROR: operand of unary indirection must be of type pointer\n");
+    } else {
+        node_get_result(unary_operation)->type = node_get_result(the_operand)->type->data.pointer.pointee;
+    }
+}
+
+void type_assign_in_address_of_operation(struct node *unary_operation) {
+    struct node *the_operand = unary_operation->data.unary_operation.the_operand;
+    assert(NODE_UNARY_OPERATION == unary_operation->kind);
+    assert(UNARYOP_ADDRESS_OF == unary_operation->data.unary_operation.operation);
+    if(!node_is_lvalue(the_operand)) {
+        type_checking_num_errors++; printf("ERROR: operand of unary address of must be an lvalue\n");
+    } else {
+        node_get_result(unary_operation)->type = type_pointer(node_get_result(the_operand)->type);
+    }
+}
+
 void type_assign_in_unary_operation(struct node *unary_operation) {
   struct node *the_operand = unary_operation->data.unary_operation.the_operand;
   struct type *operand_type;
@@ -306,28 +330,34 @@ void type_assign_in_unary_operation(struct node *unary_operation) {
   operand_type = node_get_result(the_operand)->type;
 
   assert(NODE_UNARY_OPERATION == unary_operation->kind);
-  switch(operand_type->kind) {
-    case TYPE_BASIC:
-      apply_usual_arithmetic_unary_conversion(unary_operation);
-      node_get_result(unary_operation)->type =
-          node_get_result(unary_operation->data.unary_operation.the_operand)->type;
-      break;
-    case TYPE_VOID:
-    case TYPE_POINTER:
-      node_get_result(unary_operation)->type = node_get_result(the_operand)->type;
-      break;
-    case TYPE_ARRAY:
-      apply_usual_array_unary_conversion(unary_operation);
-      break;
-    case TYPE_FUNCTION:
-      type_checking_num_errors++; printf("ERROR: operand of unary operation cannot be function type\n");
-      break;
-    case TYPE_LABEL:
-      type_checking_num_errors++; printf("ERROR: operand of unary operation cannot be label type\n");
-      break;
-    default:
-      type_checking_num_errors++; printf("ERROR: the operand of unary operand is of unknown type\n");
-      break;
+  if(unary_operation->data.unary_operation.operation == UNARYOP_INDIRECTION) {
+      type_assign_in_indirection_operation(unary_operation); 
+  } else if(unary_operation->data.unary_operation.operation == UNARYOP_ADDRESS_OF) {
+      type_assign_in_address_of_operation(unary_operation); 
+  } else {
+      switch(operand_type->kind) {
+        case TYPE_BASIC:
+          apply_usual_arithmetic_unary_conversion(unary_operation);
+          node_get_result(unary_operation)->type =
+              node_get_result(unary_operation->data.unary_operation.the_operand)->type;
+          break;
+        case TYPE_VOID:
+        case TYPE_POINTER:
+          node_get_result(unary_operation)->type = node_get_result(the_operand)->type;
+          break;
+        case TYPE_ARRAY:
+          apply_usual_array_unary_conversion(unary_operation);
+          break;
+        case TYPE_FUNCTION:
+          type_checking_num_errors++; printf("ERROR: operand of unary operation cannot be function type\n");
+          break;
+        case TYPE_LABEL:
+          type_checking_num_errors++; printf("ERROR: operand of unary operation cannot be label type\n");
+          break;
+        default:
+          type_checking_num_errors++; printf("ERROR: the operand of unary operand is of unknown type\n");
+          break;
+      }
   }
   /* xxx: No converting yet */
 }
@@ -706,11 +736,22 @@ void type_assign_in_subscript_expr(struct node *subscript_expr) {
   node_get_result(subscript_expr)->type = type->data.array.array_type;
 }
 
+void type_assign_in_compound_statement(struct node *compound_statement) {
+    if(compound_statement->data.compound_statement.declaration_or_statement_list != NULL) {
+        type_assign_in_expression(compound_statement->data.compound_statement.declaration_or_statement_list);
+    }
+}
+
 void type_assign_in_statement(struct node *statement) {
   printf("Statement kind: %d\n", statement->kind);
   assert(NODE_STATEMENT == statement->kind);
   if (NULL != statement->data.statement.statement) {
-    type_assign_in_statement(statement->data.statement.statement);
+      if(statement->data.statement.statement->kind == NODE_STATEMENT) {
+          type_assign_in_statement(statement->data.statement.statement);
+      } else {
+          assert(statement->data.statement.statement->kind == NODE_COMPOUND_STATEMENT);
+          type_assign_in_compound_statement(statement->data.statement.statement);
+      }
   }
   if(statement->data.statement.type_of_statement== RETURN_STATEMENT_TYPE) {
       printf("Return statement!\n");
@@ -724,12 +765,6 @@ void type_assign_in_statement_list(struct node *statement_list) {
     type_assign_in_expression(statement_list->data.statement_list.init);
   }
   type_assign_in_expression(statement_list->data.statement_list.statement);
-}
-
-void type_assign_in_compound_statement(struct node *compound_statement) {
-    if(compound_statement->data.compound_statement.declaration_or_statement_list != NULL) {
-        type_assign_in_expression(compound_statement->data.compound_statement.declaration_or_statement_list);
-    }
 }
 
 void type_assign_in_function_def_specifier(struct node *function_def_specifier) {

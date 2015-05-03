@@ -557,10 +557,10 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
 
     addressOfOperand = node_get_result(the_operand)->ir_operand;
 
-    /* First convert the operand to an rvalue */
-    ir_generate_for_conversion_to_rvalue(the_operand);
-
     valueOfOperandBeforeIncrementing = node_get_result(the_operand)->ir_operand;
+
+    /* Convert the operand to an rvalue */
+    ir_generate_for_conversion_to_rvalue(the_operand);
 
     /* Create the constInt instruction for the number 1 */
     ir_operand_temporary(constant_inc_instruction, 0);
@@ -585,10 +585,11 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
 
     if(is_prefix) {
         node_get_result(the_operand)->ir_operand = &add_instruction->operands[0];
+        node_get_result(the_operand)->ir_operand->lvalue = false;
     } else {
         node_get_result(the_operand)->ir_operand = valueOfOperandBeforeIncrementing;
+        node_get_result(the_operand)->ir_operand->lvalue = valueOfOperandBeforeIncrementing->lvalue;
     }
-    node_get_result(the_operand)->ir_operand->lvalue = false;
 }
 
 void ir_generate_for_simple_unary_operation(int kind, struct node *the_operand) {
@@ -648,10 +649,6 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
         break;
       case UNARYOP_INDIRECTION:
         ir_generate_for_expression(the_operand, NULL, NULL);
-        if(node_get_result(the_operand)->ir_operand->lvalue) {
-            ir_generation_num_errors++;
-            printf("ERROR: The operand to the indirection operation must be an rvalue\n");
-        }
         ir_generate_for_conversion_to_rvalue(the_operand);
         node_get_result(the_operand)->ir_operand->lvalue = true;
         break;
@@ -1582,6 +1579,7 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_BITWISE_OR:
     case IR_BITWISE_XOR:
     case IR_BITWISE_AND:
+    case IR_REMAINDER:
       ir_print_operand(output, &instruction->operands[0]);
       fprintf(output, ", ");
       ir_print_operand(output, &instruction->operands[1]);

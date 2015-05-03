@@ -128,8 +128,8 @@ void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
   static char *opcodes[] = {
     NULL,
     NULL,
-    "mulu",
-    "divu",
+    NULL,
+    NULL,
     "addu",
     "subu",
     NULL,
@@ -142,6 +142,16 @@ void mips_print_arithmetic(FILE *output, struct ir_instruction *instruction) {
     NULL,
     NULL,
     "sltu",
+    "sle",
+    "sgt",
+    "sge",
+    "sll",
+    "sra",
+    "seq",
+    "sne",
+    "or",
+    "xor",
+    "and",
     NULL
   };
   fprintf(output, "%10s ", opcodes[instruction->kind]);
@@ -220,7 +230,7 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
         temp_instruction = temp_instruction->next;
         if((temp_instruction->kind == IR_ADDRESS_OF) &&
            (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
-	  number_of_bytes_for_frame += 
+	  number_of_bytes_for_frame +=
 	    temp_instruction->operands[1].data.identifier.symbol->owner_symbol_table->total_stack_offset;
 	  break;
         }
@@ -327,7 +337,7 @@ void mips_print_function_call(FILE *output, struct ir_instruction *instruction) 
         } else {
             printf("Not a system function. Should not come here\n");
             assert(0);
-                
+
         }
         fprintf(output, "\n%10s\n", "syscall");
     }
@@ -414,7 +424,7 @@ void mips_print_function_end(FILE *output, struct ir_instruction *instruction) {
         }
         if((temp_instruction->kind == IR_ADDRESS_OF) &&
            (temp_instruction->operands[1].kind == OPERAND_IDENTIFIER)) {
-            number_of_bytes_for_frame += 
+            number_of_bytes_for_frame +=
                 temp_instruction->operands[1].data.identifier.symbol->owner_symbol_table->total_stack_offset;
             break;
         }
@@ -428,18 +438,116 @@ void mips_print_function_end(FILE *output, struct ir_instruction *instruction) {
     fprintf(output, "%10s %10s\n\n", "jr", "$ra");
 }
 
+void mips_print_multiply_or_divide(FILE *output, struct ir_instruction *instruction) {
+    if(IR_MULTIPLY == instruction->kind) {
+        fprintf(output, "%10s ", "multu");
+    } else if(IR_DIVIDE == instruction->kind) {
+        fprintf(output, "%10s ", "divu");
+    } else {
+        assert(IR_REMAINDER == instruction->kind);
+        fprintf(output, "%10s ", "divu");
+    }
+    mips_print_temporary_operand(output, &instruction->operands[1]);
+    fprintf(output, ",");
+    mips_print_temporary_operand(output, &instruction->operands[2]);
+    fprintf(output, "\n");
+
+    if(instruction->kind == IR_MULTIPLY) {
+        /* Retrieving the lower 32 bits from the LO register.
+         * Here, we assume that there is no overflow due to
+         * multiply. This can be dangerous and is a short-term
+         * fix
+         */
+        fprintf(output, "%10s ", "mflo");
+        mips_print_temporary_operand(output, &instruction->operands[0]);
+        fprintf(output, "\n");
+    }
+
+    if(instruction->kind == IR_DIVIDE) {
+        /* The quotient is stored in the LO register */
+        fprintf(output, "%10s ", "mflo");
+        mips_print_temporary_operand(output, &instruction->operands[0]);
+        fprintf(output, "\n");
+    }
+
+    if(instruction->kind == IR_REMAINDER) {
+        /* The quotient is stored in the HI register */
+        fprintf(output, "%10s ", "mfhi");
+        mips_print_temporary_operand(output, &instruction->operands[0]);
+        fprintf(output, "\n");
+    }
+}
+
+void mips_print_bitwise_not(FILE *output, struct ir_instruction *instruction) {
+    fprintf(output, "%10s ", "not");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    mips_print_temporary_operand(output, &instruction->operands[1]);
+    fprintf(output, "\n");
+}
+
+void mips_print_negation(FILE *output, struct ir_instruction *instruction) {
+    fprintf(output, "%10s ", "not");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    mips_print_temporary_operand(output, &instruction->operands[1]);
+    fprintf(output, "\n");
+
+    fprintf(output, "%10s ", "addi");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ", %10d\n", -1);
+    fprintf(output, "\n");
+}
+
+void mips_print_logical_not(FILE *output, struct ir_instruction *instruction) {
+    fprintf(output, "%10s ", "sne");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    mips_print_temporary_operand(output, &instruction->operands[0]);
+    fprintf(output, ",");
+    fprintf(output, "%10s\n", "$0");
+    fprintf(output, "\n");
+}
+
 void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
   switch (instruction->kind) {
-    case IR_MULTIPLY:
-    case IR_DIVIDE:
     case IR_ADD:
     case IR_SUBTRACT:
     case IR_LESS_THAN:
+    case IR_LESS_THAN_OR_EQ_TO:
+    case IR_GREATER_THAN:
+    case IR_GREATER_THAN_OR_EQ_TO:
+    case IR_SHIFT_LEFT:
+    case IR_SHIFT_RIGHT:
+    case IR_EQUAL_TO:
+    case IR_NOT_EQUAL_TO:
+    case IR_BITWISE_OR:
+    case IR_BITWISE_XOR:
+    case IR_BITWISE_AND:
       mips_print_arithmetic(output, instruction);
       break;
 
+    case IR_MULTIPLY:
+    case IR_DIVIDE:
+    case IR_REMAINDER:
+      mips_print_multiply_or_divide(output, instruction);
+      break;
     case IR_COPY:
       mips_print_copy(output, instruction);
+      break;
+
+    case IR_BITWISE_NOT:
+      mips_print_bitwise_not(output, instruction);
+      break;
+
+    case IR_LOGICAL_NOT:
+      mips_print_logical_not(output, instruction);
+      break;
+
+    case IR_NEGATION:
+      mips_print_negation(output, instruction);
       break;
 
     case IR_LOAD_IMMEDIATE:

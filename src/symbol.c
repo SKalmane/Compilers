@@ -416,17 +416,39 @@ void symbol_add_from_function_declarator_from_definition(struct symbol_table *ta
                                function_type);
 }
 
+void symbol_add_from_pointer_declarator_from_definition(struct symbol_table *table,
+                                                         struct node *pointer_declarator,
+                                                         struct type **function_type) {
+    struct type *pointer_declarator_type = NULL;
+    assert(NODE_POINTER_DECLARATOR == pointer_declarator->kind);
+    assert(pointer_declarator->data.pointer_declarator.declarator != NULL);
+    assert((*function_type)->data.function.function_symbol_table != NULL);
+    pointer_declarator_type = get_type_from_pointer_declarator((*function_type)->data.function.return_type);
+    (*function_type)->data.function.return_type = pointer_declarator_type;
+    if(pointer_declarator->data.pointer_declarator.declarator->kind == NODE_POINTER_DECLARATOR) {
+        symbol_add_from_pointer_declarator_from_definition(table, 
+                                                           pointer_declarator->data.pointer_declarator.declarator, 
+                                                           function_type);
+    } else {
+        assert(pointer_declarator->data.pointer_declarator.declarator->kind == NODE_FUNCTION_DECLARATOR);
+        symbol_add_from_function_declarator_from_definition(table, 
+                                                            pointer_declarator->data.pointer_declarator.declarator,
+                                                            function_type);
+    }
+}
+
 void symbol_add_from_function_def_specifier(struct symbol_table *table, struct node *function_def_specifier, struct type **function_type) {
     assert(NODE_FUNCTION_DEF_SPECIFIER == function_def_specifier->kind);
 
     (*function_type)->data.function.return_type =
         get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
-
-    /* The following won't do anything since we don't need to add type_specifiers to our symbol table */
+    
     symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.decl_specifier, NULL);
     if(function_def_specifier->data.function_def_specifier.declarator->kind != NODE_FUNCTION_DECLARATOR) {
-        symbol_table_num_errors++;
-        printf("ERROR: Syntax error! Incorrect function definition\n");
+        assert(function_def_specifier->data.function_def_specifier.declarator->kind == NODE_POINTER_DECLARATOR);
+        symbol_add_from_pointer_declarator_from_definition(table, 
+                                                           function_def_specifier->data.function_def_specifier.declarator,
+                                                           function_type);
     } else {
         symbol_add_from_function_declarator_from_definition(table,
                                                             function_def_specifier->data.function_def_specifier.declarator,

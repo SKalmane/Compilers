@@ -3,7 +3,7 @@ void print_string(char *s);
 int read_int(void);
 
 int fib(int n) {
-    return (n < (int)2 ? 1 : (fib(n-1) + fib(n-2)));
+    return (n < (int)2 ? n : (fib(n-1) + fib(n-2)));
 }
 
 int main(int argc, char *argv[]) {
