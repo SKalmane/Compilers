@@ -331,9 +331,9 @@ void type_assign_in_unary_operation(struct node *unary_operation) {
 
   assert(NODE_UNARY_OPERATION == unary_operation->kind);
   if(unary_operation->data.unary_operation.operation == UNARYOP_INDIRECTION) {
-      type_assign_in_indirection_operation(unary_operation); 
+      type_assign_in_indirection_operation(unary_operation);
   } else if(unary_operation->data.unary_operation.operation == UNARYOP_ADDRESS_OF) {
-      type_assign_in_address_of_operation(unary_operation); 
+      type_assign_in_address_of_operation(unary_operation);
   } else {
       switch(operand_type->kind) {
         case TYPE_BASIC:

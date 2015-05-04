@@ -9,7 +9,7 @@
 
 int symbol_table_num_errors;
 
-/* Labels - adding proper symbols for labels 
+/* Labels - adding proper symbols for labels
  * Function def specifier - we assume that it has to be
  * a function declarator - it can be pointer decl too
  */
@@ -426,12 +426,12 @@ void symbol_add_from_pointer_declarator_from_definition(struct symbol_table *tab
     pointer_declarator_type = get_type_from_pointer_declarator((*function_type)->data.function.return_type);
     (*function_type)->data.function.return_type = pointer_declarator_type;
     if(pointer_declarator->data.pointer_declarator.declarator->kind == NODE_POINTER_DECLARATOR) {
-        symbol_add_from_pointer_declarator_from_definition(table, 
-                                                           pointer_declarator->data.pointer_declarator.declarator, 
+        symbol_add_from_pointer_declarator_from_definition(table,
+                                                           pointer_declarator->data.pointer_declarator.declarator,
                                                            function_type);
     } else {
         assert(pointer_declarator->data.pointer_declarator.declarator->kind == NODE_FUNCTION_DECLARATOR);
-        symbol_add_from_function_declarator_from_definition(table, 
+        symbol_add_from_function_declarator_from_definition(table,
                                                             pointer_declarator->data.pointer_declarator.declarator,
                                                             function_type);
     }
@@ -442,11 +442,11 @@ void symbol_add_from_function_def_specifier(struct symbol_table *table, struct n
 
     (*function_type)->data.function.return_type =
         get_type_from_type_specifier(function_def_specifier->data.function_def_specifier.decl_specifier);
-    
+
     symbol_add_from_expression(table, function_def_specifier->data.function_def_specifier.decl_specifier, NULL);
     if(function_def_specifier->data.function_def_specifier.declarator->kind != NODE_FUNCTION_DECLARATOR) {
         assert(function_def_specifier->data.function_def_specifier.declarator->kind == NODE_POINTER_DECLARATOR);
-        symbol_add_from_pointer_declarator_from_definition(table, 
+        symbol_add_from_pointer_declarator_from_definition(table,
                                                            function_def_specifier->data.function_def_specifier.declarator,
                                                            function_type);
     } else {

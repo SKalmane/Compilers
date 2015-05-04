@@ -5,23 +5,24 @@ int read_int(void);
 
 void print_fizz_buzz(int length) {
     int i;
+    int len;
     int remainderOnDividingByThree;
     int remainderOnDividingByFive;
-    if(i < 1) {
-        print_string("Please enter a number greater than zero..\n");
+    len = length;
+    if(len < 1) {
+      print_string("Please enter a number greater than zero..\n");
     } else {
-        i = length;
-        /* for(i = 1; i <= length; i++) { */
+      for(i = 1; i <= len; ++i) {
         remainderOnDividingByThree = (i % 3);
         remainderOnDividingByFive = (i % 5);
         if((!remainderOnDividingByThree) && (!remainderOnDividingByFive)) {
-            print_string("FizzBuzz\n");
+	  print_string("FizzBuzz\n");
         } else if(!remainderOnDividingByFive) {
-            print_string("Fizz\n");
+	  print_string("Fizz\n");
         } else if(!remainderOnDividingByThree) {
-            print_string("Buzz\n");
+	  print_string("Buzz\n");
         }
-        /* } */
+      }
     }
 }
 

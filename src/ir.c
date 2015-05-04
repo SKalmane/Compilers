@@ -105,29 +105,29 @@ static void assign_stack_offsets_to_variables(struct node *identifier) {
     struct symbol *symbol = identifier->data.identifier.symbol;
     struct symbol_table *table = symbol->owner_symbol_table;
     if(((table->type_of_symbol_table == FUNCTION_SCOPE_SYMBOL_TABLE) ||
-        (table->type_of_symbol_table == BLOCK_SCOPE_SYMBOL_TABLE)) && 
+        (table->type_of_symbol_table == BLOCK_SCOPE_SYMBOL_TABLE)) &&
        (symbol->stack_offset == STACK_OFFSET_NOT_YET_DEFINED)) {
-        printf("Assigning stack offsets to variables.. \n Stack offset at present: %d\n", 
+        printf("Assigning stack offsets to variables.. \n Stack offset at present: %d\n",
                table->total_stack_offset);
         switch (type->kind) {
           case TYPE_BASIC:
-            printf("Identifier name: %s\n", 
-                   identifier->data.identifier.name);            
+            printf("Identifier name: %s\n",
+                   identifier->data.identifier.name);
             symbol->stack_offset = table->total_stack_offset;
             table->total_stack_offset += type->data.basic.width;
             break;
           case TYPE_POINTER:
             symbol->stack_offset = table->total_stack_offset;
-            table->total_stack_offset += TYPE_WIDTH_POINTER;          
+            table->total_stack_offset += TYPE_WIDTH_POINTER;
             break;
           case TYPE_ARRAY:
             symbol->stack_offset = table->total_stack_offset;
-            table->total_stack_offset += type->data.array.array_size;          
+            table->total_stack_offset += type->data.array.array_size;
             break;
           case TYPE_VOID:
             /* Not sure if we can have a pure void type */
           case TYPE_FUNCTION:
-            /* We can't have a function definition within a function */          
+            /* We can't have a function definition within a function */
           case TYPE_LABEL:
             /* Label symbol changes need to go through symbol_put_labels */
           default:
@@ -510,7 +510,7 @@ void ir_generate_for_logical_binary_operation(int kind, struct node *binary_oper
 
     ir_generate_gotoFalseOrTrue(gotoIf_instruction2, node_get_result(right)->ir_operand, label_instruction1);
 
-    storeword_instruction1 = ir_instruction(IR_STORE_WORD);
+    storeword_instruction1 = ir_instruction(IR_COPY);
     ir_operand_temporary(storeword_instruction1, 0);
     ir_operand_copy(storeword_instruction1, 1,
                     &constant_instruction1->operands[0]);
@@ -518,7 +518,7 @@ void ir_generate_for_logical_binary_operation(int kind, struct node *binary_oper
     goto_instruction = ir_instruction(IR_GOTO);
     ir_generate_goto(goto_instruction, label_instruction2);
 
-    storeword_instruction2 = ir_instruction(IR_STORE_WORD);
+    storeword_instruction2 = ir_instruction(IR_COPY);
     ir_operand_copy(storeword_instruction2, 0,
                     &storeword_instruction1->operands[0]);
     ir_operand_copy(storeword_instruction2, 1,
@@ -711,7 +711,7 @@ int get_width_of_type(struct type *type) {
     return width_of_expr;
 }
 
-void ir_generate_for_unary_casting_expr(struct ir_operand *ir_operand, 
+void ir_generate_for_unary_casting_expr(struct ir_operand *ir_operand,
                                         struct node *unary_casting_expr,
                                         struct type *type_of_expr) {
     struct node *the_operand = unary_casting_expr->data.unary_operation.the_operand;
@@ -809,7 +809,7 @@ void ir_generate_for_cast_expr(struct node *cast_expr) {
 
     ir_generate_for_expression(cast_expr_within, NULL, NULL);
 
-    ir_generate_for_unary_casting_expr(node_get_result(cast_expr_within)->ir_operand, 
+    ir_generate_for_unary_casting_expr(node_get_result(cast_expr_within)->ir_operand,
                                        unary_casting_expr, node_get_result(cast_expr_within)->type);
     cast_expr->ir = ir_concatenate(cast_expr_within->ir, unary_casting_expr->ir);
     node_get_result(cast_expr)->ir_operand = node_get_result(unary_casting_expr)->ir_operand;
@@ -1006,7 +1006,7 @@ void ir_generate_for_function_definition(struct node *function_definition) {
   function_definition->ir = ir_concatenate(function_definition->ir,
                                            compound_statement->ir);
 
-  
+
   function_end = ir_instruction(IR_FUNCTION_END);
   ir_operand_identifier(function_end, 0, function_name_identifier);
 
@@ -1014,7 +1014,7 @@ void ir_generate_for_function_definition(struct node *function_definition) {
   ir_append(function_definition->ir, function_end);
 }
 
-void ir_generate_for_while_statement(struct node *while_statement, 
+void ir_generate_for_while_statement(struct node *while_statement,
                                      struct ir_instruction *function_end_label) {
   struct node *expression = while_statement->data.statement.expression;
   struct ir_instruction *label_instruction1, *label_instruction2;
@@ -1098,13 +1098,13 @@ void ir_generate_for_return_statement(struct node *return_statement,
 
   goto_instruction = ir_instruction(IR_GOTO);
   ir_generate_goto(goto_instruction, function_end_label);
-  
+
   ir_append(return_statement->ir, goto_instruction);
 }
 
-void ir_generate_for_for_expr(struct node *for_expr,
-                              struct ir_instruction *label_instruction_conditional,
-                              struct ir_instruction *label_instruction_unconditional) {
+struct ir_section * ir_generate_for_for_expr(struct node *for_expr,
+					     struct ir_instruction *label_instruction_conditional,
+					     struct ir_instruction *label_instruction_unconditional) {
     struct node *initial_clause = for_expr->data.for_expr.initial_clause;
     struct node *expr1 = for_expr->data.for_expr.expr1;
     struct node *expr2 = for_expr->data.for_expr.expr2;
@@ -1125,16 +1125,21 @@ void ir_generate_for_for_expr(struct node *for_expr,
         ir_generate_for_expression(expr2, NULL, NULL);
     }
 
-    for_expr->ir = ir_section(label_instruction_unconditional, label_instruction_unconditional);
     if(initial_clause != NULL) {
-        for_expr->ir = ir_concatenate(for_expr->ir, initial_clause->ir);
+        for_expr->ir = ir_copy(initial_clause->ir);
+	ir_append(for_expr->ir, label_instruction_unconditional);
+    } else {
+      for_expr->ir = ir_section(label_instruction_unconditional, label_instruction_unconditional);
     }
+
     if(expr1 != NULL) {
         for_expr->ir = ir_concatenate(for_expr->ir, expr1->ir);
         ir_append(for_expr->ir, gotoIfFalse_instruction);
     }
     if(expr2 != NULL) {
-        for_expr->ir = ir_concatenate(for_expr->ir, expr2->ir);
+      return expr2->ir;
+    } else {
+      return NULL;
     }
 }
 
@@ -1180,7 +1185,7 @@ void ir_generate_for_function_call(struct node *function_call) {
         printf("ERROR: The function name has to be an identifier\n");
         return;
     }
-    if(expression_list != NULL) {        
+    if(expression_list != NULL) {
         ir_generate_for_expression_list(expression_list, &num_of_parameters);
         function_call->ir = ir_copy(expression_list->ir);
     }
@@ -1204,7 +1209,7 @@ void ir_generate_for_for_statement(struct node *for_statement,
   struct ir_instruction *label_instruction_unconditional, *label_instruction_conditional;
   struct ir_instruction *goto_instruction;
   struct node *statement_within = for_statement->data.statement.statement;
-
+  struct ir_section *for_expr_update_expr_ir;
   assert(NODE_STATEMENT == for_statement->kind);
 
   label_instruction_unconditional = ir_instruction(IR_GENERATED_LABEL);
@@ -1213,9 +1218,9 @@ void ir_generate_for_for_statement(struct node *for_statement,
   label_instruction_conditional = ir_instruction(IR_GENERATED_LABEL);
   ir_generate_label(label_instruction_conditional);
 
-  ir_generate_for_for_expr(for_expr,
-                           label_instruction_conditional,
-                           label_instruction_unconditional);
+  for_expr_update_expr_ir = ir_generate_for_for_expr(for_expr,
+						  label_instruction_conditional,
+						  label_instruction_unconditional);
 
   ir_generate_for_expression(statement_within, function_end_label, label_instruction_conditional);
 
@@ -1223,8 +1228,10 @@ void ir_generate_for_for_statement(struct node *for_statement,
   ir_generate_goto(goto_instruction, label_instruction_unconditional);
 
   for_statement->ir = ir_copy(for_expr->ir);
-  for_statement->ir = ir_concatenate(for_statement->ir, for_expr->ir);
   for_statement->ir = ir_concatenate(for_statement->ir, statement_within->ir);
+  if(for_expr_update_expr_ir != NULL) {
+    for_statement->ir = ir_concatenate(for_statement->ir, for_expr_update_expr_ir);
+  }
   ir_append(for_statement->ir, goto_instruction);
   ir_append(for_statement->ir, label_instruction_conditional);
 }
@@ -1267,6 +1274,9 @@ void ir_generate_for_if_statement(struct node *if_statement,
     struct node *if_statement_within = if_statement->data.if_statement.if_statement;
     struct node *else_statement_within = if_statement->data.if_statement.else_statement;
     struct ir_instruction *label_instruction, *gotoIfFalse_instruction;
+    struct ir_instruction *goto_instruction1, *goto_instruction2;
+    struct ir_instruction *end_of_if_else_statement;
+
     assert(NODE_IF_STATEMENT == if_statement->kind);
     if(expr == NULL) {
         ir_generation_num_errors++;
@@ -1275,23 +1285,34 @@ void ir_generate_for_if_statement(struct node *if_statement,
     ir_generate_for_expression(expr, NULL, NULL);
     label_instruction = ir_instruction(IR_GENERATED_LABEL);
     ir_generate_label(label_instruction);
+
+    end_of_if_else_statement = ir_instruction(IR_GENERATED_LABEL);
+    ir_generate_label(end_of_if_else_statement);
+
     gotoIfFalse_instruction = ir_instruction(IR_GOTO_IF_FALSE);
     ir_generate_gotoFalseOrTrue(gotoIfFalse_instruction, node_get_result(expr)->ir_operand, label_instruction);
     if(if_statement_within != NULL) {
         ir_generate_for_expression(if_statement_within, function_end_label, inner_loop_end_label);
+	goto_instruction1 = ir_instruction(IR_GOTO);
+	ir_generate_goto(goto_instruction1, end_of_if_else_statement);
     }
     if(else_statement_within != NULL) {
         ir_generate_for_expression(else_statement_within, function_end_label, inner_loop_end_label);
+	goto_instruction2 = ir_instruction(IR_GOTO);
+	ir_generate_goto(goto_instruction2, end_of_if_else_statement);
     }
     if_statement->ir = ir_copy(expr->ir);
     ir_append(if_statement->ir, gotoIfFalse_instruction);
     if(if_statement_within != NULL) {
         if_statement->ir = ir_concatenate(if_statement->ir, if_statement_within->ir);
+	ir_append(if_statement->ir, goto_instruction1);
     }
     ir_append(if_statement->ir, label_instruction);
     if(else_statement_within != NULL) {
         if_statement->ir = ir_concatenate(if_statement->ir, else_statement_within->ir);
+	ir_append(if_statement->ir, goto_instruction2);
     }
+    ir_append(if_statement->ir, end_of_if_else_statement);
 }
 
 void ir_generate_for_goto_statement(struct node *goto_statement) {
@@ -1307,7 +1328,7 @@ void ir_generate_for_statement(struct node *statement,
                                    struct ir_instruction *function_end_label,
                                    struct ir_instruction *inner_loop_end_label) {
     /* Reset temporaries for every statement */
-    
+
   assert(NODE_STATEMENT == statement->kind);
   switch(statement->data.statement.type_of_statement) {
     case EXPRESSION_STATEMENT_TYPE:
@@ -1317,7 +1338,7 @@ void ir_generate_for_statement(struct node *statement,
                                            inner_loop_end_label);
       break;
     case WHILE_STATEMENT_TYPE:
-      ir_generate_for_while_statement(statement, 
+      ir_generate_for_while_statement(statement,
                                       function_end_label);
       break;
     case RETURN_STATEMENT_TYPE:
@@ -1541,7 +1562,7 @@ static void ir_print_operand(FILE *output, struct ir_operand *operand) {
       fprintf(output, "     t%04d", operand->data.temporary);
       break;
     case OPERAND_IDENTIFIER:
-      fprintf(output, "     %p     %s   %d", (void *)operand->data.identifier.symbol, 
+      fprintf(output, "     %p     %s   %d", (void *)operand->data.identifier.symbol,
               operand->data.identifier.identifier_name,
               operand->data.identifier.symbol->stack_offset);
       break;

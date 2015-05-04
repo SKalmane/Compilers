@@ -502,10 +502,10 @@ void mips_print_negation(FILE *output, struct ir_instruction *instruction) {
 }
 
 void mips_print_logical_not(FILE *output, struct ir_instruction *instruction) {
-    fprintf(output, "%10s ", "sne");
+    fprintf(output, "%10s ", "seq");
     mips_print_temporary_operand(output, &instruction->operands[0]);
     fprintf(output, ",");
-    mips_print_temporary_operand(output, &instruction->operands[0]);
+    mips_print_temporary_operand(output, &instruction->operands[1]);
     fprintf(output, ",");
     fprintf(output, "%10s\n", "$0");
     fprintf(output, "\n");
