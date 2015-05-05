@@ -35,9 +35,7 @@ char *strcpy(char *dest, char *src) {
 
   initial_dest = dest;
   do {
-    /* *dest++ = *src; */
-      *dest = *src;
-      dest = dest+1;
+    *dest++ = *src;
   } while(*src++);
   return initial_dest;
 }

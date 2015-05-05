@@ -546,8 +546,8 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     struct ir_instruction *add_instruction = ir_instruction(kind);
     struct ir_instruction *constant_inc_instruction = ir_instruction(IR_LOAD_IMMEDIATE);
     struct ir_instruction *store_instruction = ir_instruction(IR_STORE_WORD);
+    struct ir_instruction *copy_instruction = ir_instruction(IR_COPY);
     struct ir_operand *addressOfOperand;
-    struct ir_operand *valueOfOperandBeforeIncrementing;
 
     ir_generate_for_expression(the_operand, NULL, NULL);
     if(!node_get_result(the_operand)->ir_operand->lvalue) {
@@ -556,8 +556,6 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     }
 
     addressOfOperand = node_get_result(the_operand)->ir_operand;
-
-    valueOfOperandBeforeIncrementing = node_get_result(the_operand)->ir_operand;
 
     /* Convert the operand to an rvalue */
     ir_generate_for_conversion_to_rvalue(the_operand);
@@ -568,6 +566,15 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     constant_inc_instruction->operands[1].data.number = 1;
     constant_inc_instruction->operands[1].lvalue = false;
 
+    if(!is_prefix) {
+      /* Copy the rvalue to another operand 
+       * This will be used if it is a postfix
+       * increment/decrement operation */
+      ir_operand_temporary(copy_instruction, 0);
+      ir_operand_copy(copy_instruction, 1,
+		      node_get_result(the_operand)->ir_operand);
+    }
+    
     /* Add/Subtract 1 to the operand */
     ir_operand_temporary(add_instruction, 0);
     ir_operand_copy(add_instruction, 1,
@@ -578,18 +585,19 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     /*Store the value back into the operand */
     ir_operand_copy(store_instruction, 0, addressOfOperand);
     ir_operand_copy(store_instruction, 1, &add_instruction->operands[0]);
-
+    if(!is_prefix) {
+      ir_append(the_operand->ir, copy_instruction);
+    }
     ir_append(the_operand->ir, constant_inc_instruction);
     ir_append(the_operand->ir, add_instruction);
     ir_append(the_operand->ir, store_instruction);
 
     if(is_prefix) {
         node_get_result(the_operand)->ir_operand = &add_instruction->operands[0];
-        node_get_result(the_operand)->ir_operand->lvalue = false;
     } else {
-        node_get_result(the_operand)->ir_operand = valueOfOperandBeforeIncrementing;
-        node_get_result(the_operand)->ir_operand->lvalue = valueOfOperandBeforeIncrementing->lvalue;
+      node_get_result(the_operand)->ir_operand = &copy_instruction->operands[0];
     }
+    node_get_result(the_operand)->ir_operand->lvalue = false;
 }
 
 void ir_generate_for_simple_unary_operation(int kind, struct node *the_operand) {
