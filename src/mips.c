@@ -285,8 +285,21 @@ void mips_print_load_address(FILE *output, struct ir_instruction *instruction) {
   }
 }
 
-void mips_print_load_word(FILE *output, struct ir_instruction *instruction) {
-  fprintf(output, "%10s ", "lw");
+void mips_print_load_word_byte_or_halfword(FILE *output, struct ir_instruction *instruction) {
+  switch(instruction->kind) {
+  case IR_LOAD_WORD:
+    fprintf(output, "%10s ", "lw");
+    break;
+  case IR_LOAD_SIGNED_BYTE:
+    fprintf(output, "%10s ", "lb");
+    break;
+  case IR_LOAD_SIGNED_HALFWORD:
+    fprintf(output, "%10s ", "lh");
+    break;
+  default:
+    assert(0);
+    break;
+  }
   mips_print_temporary_operand(output, &instruction->operands[0]);
   assert(OPERAND_TEMPORARY == instruction->operands[1].kind);
   fputs(", ", output);
@@ -294,8 +307,21 @@ void mips_print_load_word(FILE *output, struct ir_instruction *instruction) {
   fprintf(output, ")\n");
 }
 
-void mips_print_store_word(FILE *output, struct ir_instruction *instruction) {
-  fprintf(output, "%10s ", "sw");
+void mips_print_store_word_byte_or_halfword(FILE *output, struct ir_instruction *instruction) {
+  switch(instruction->kind) {
+  case IR_STORE_WORD:
+    fprintf(output, "%10s ", "sw");
+    break;
+  case IR_STORE_SIGNED_BYTE:
+    fprintf(output, "%10s ", "sb");
+    break;
+  case IR_STORE_SIGNED_HALFWORD:
+    fprintf(output, "%10s ", "sh");
+    break;
+  default:
+    assert(0);
+    break;
+  }
   mips_print_temporary_operand(output, &instruction->operands[1]);
   assert(OPERAND_TEMPORARY == instruction->operands[1].kind);
   fputs(", ", output);
@@ -571,10 +597,14 @@ void mips_print_instruction(FILE *output, struct ir_instruction *instruction) {
       mips_print_load_address(output, instruction);
       break;
   case IR_LOAD_WORD:
-      mips_print_load_word(output, instruction);
+  case IR_LOAD_SIGNED_BYTE:
+  case IR_LOAD_SIGNED_HALFWORD:
+      mips_print_load_word_byte_or_halfword(output, instruction);
       break;
   case IR_STORE_WORD:
-      mips_print_store_word(output, instruction);
+  case IR_STORE_SIGNED_BYTE:
+  case IR_STORE_SIGNED_HALFWORD:
+      mips_print_store_word_byte_or_halfword(output, instruction);
       break;
   case IR_FUNCTION_PARAMETER:
       mips_print_function_parameter(output, instruction);

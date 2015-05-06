@@ -91,6 +91,11 @@ struct ir_operand {
 #define IR_CAST_WORD_TO_S_HWORD   55
 #define IR_CAST_BYTE_TO_U_HWORD   56
 #define IR_CAST_BYTE_TO_S_HWORD   57
+#define IR_LOAD_SIGNED_BYTE       58
+#define IR_LOAD_SIGNED_HALFWORD   59
+#define IR_STORE_SIGNED_BYTE      60
+#define IR_STORE_SIGNED_HALFWORD  61
+
 
 struct ir_instruction {
   int kind;

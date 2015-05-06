@@ -237,6 +237,57 @@ void ir_generate_for_expression(struct node *expression,
                                 struct ir_instruction *function_end_label,
                                 struct ir_instruction *inner_loop_end_label);
 
+
+int get_type_is_unsigned(struct type *type) {
+    bool expr_is_unsigned;
+    switch(type->kind) {
+      case TYPE_BASIC:
+        expr_is_unsigned = type->data.basic.is_unsigned;
+        break;
+      case TYPE_POINTER:
+        expr_is_unsigned = true;
+        break;
+      case TYPE_ARRAY:
+        expr_is_unsigned = get_type_is_unsigned(type->data.array.array_type);
+        break;
+      case TYPE_FUNCTION:
+        expr_is_unsigned = get_type_is_unsigned(type->data.function.return_type);
+        break;
+      case TYPE_LABEL:
+        printf("Cannot cast a label. Incorrect Syntax\n");
+      case TYPE_VOID:
+      default:
+        assert(0);
+        break;
+    }
+    return expr_is_unsigned;
+}
+
+int get_width_of_type(struct type *type) {
+    int width_of_expr;
+    switch(type->kind) {
+      case TYPE_BASIC:
+        width_of_expr = type->data.basic.width;
+        break;
+      case TYPE_POINTER:
+        width_of_expr = TYPE_WIDTH_POINTER;
+        break;
+      case TYPE_ARRAY:
+        width_of_expr = get_width_of_type(type->data.array.array_type);
+        break;
+      case TYPE_FUNCTION:
+        width_of_expr = get_width_of_type(type->data.function.return_type);
+        break;
+      case TYPE_LABEL:
+        printf("Cannot cast a label. Incorrect Syntax\n");
+      case TYPE_VOID:
+      default:
+        assert(0);
+        break;
+    }
+    return width_of_expr;
+}
+
 void ir_generate_for_conversion_to_rvalue(struct node *lvalue_node) {
     struct ir_instruction *instruction;
 
@@ -245,7 +296,22 @@ void ir_generate_for_conversion_to_rvalue(struct node *lvalue_node) {
         return;
     }
 
-    instruction = ir_instruction(IR_LOAD_WORD);
+    if(get_width_of_type(node_get_result(lvalue_node)->type) == 1) {
+      if(!get_type_is_unsigned(node_get_result(lvalue_node)->type)) {
+	instruction = ir_instruction(IR_LOAD_SIGNED_BYTE);
+      } else {
+	instruction = ir_instruction(IR_LOAD_WORD);
+      }
+    } else if(get_width_of_type(node_get_result(lvalue_node)->type) == 2) {
+      if(!get_type_is_unsigned(node_get_result(lvalue_node)->type)) {
+	instruction = ir_instruction(IR_LOAD_SIGNED_HALFWORD);
+      } else {
+	instruction = ir_instruction(IR_LOAD_WORD);
+      }
+    } else {
+      instruction = ir_instruction(IR_LOAD_WORD);
+    }
+    
     ir_operand_temporary(instruction, 0);
     ir_operand_copy(instruction, 1,
                     node_get_result(lvalue_node)->ir_operand);
@@ -305,7 +371,21 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
       ir_generate_for_conversion_to_rvalue(binary_operation->data.binary_operation.right_operand);
   }
 
-  instruction = ir_instruction(IR_STORE_WORD);
+  if(get_width_of_type(node_get_result(left)->type) == 1) {
+    if(!get_type_is_unsigned(node_get_result(left)->type)) {
+      instruction = ir_instruction(IR_STORE_SIGNED_BYTE);
+    } else {
+      instruction = ir_instruction(IR_STORE_WORD);
+    }
+  } else if(get_width_of_type(node_get_result(left)->type) == 2) {
+    if(!get_type_is_unsigned(node_get_result(left)->type)) {
+      instruction = ir_instruction(IR_STORE_SIGNED_HALFWORD);
+    } else {
+	instruction = ir_instruction(IR_STORE_WORD);
+    }
+  } else {
+    instruction = ir_instruction(IR_STORE_WORD);
+  }
 
   ir_operand_copy(instruction, 0,
                   node_get_result(left)->ir_operand);
@@ -342,7 +422,21 @@ void ir_generate_for_compound_assignment(int kind, struct node *binary_operation
   }
   binary_operation->ir = ir_concatenate(binary_operation->ir, left->ir);
 
-  instruction = ir_instruction(IR_STORE_WORD);
+  if(get_width_of_type(node_get_result(left)->type) == 1) {
+    if(!get_type_is_unsigned(node_get_result(left)->type)) {
+      instruction = ir_instruction(IR_STORE_SIGNED_BYTE);
+    } else {
+      instruction = ir_instruction(IR_STORE_WORD);
+    }
+  } else if(get_width_of_type(node_get_result(left)->type) == 2) {
+    if(!get_type_is_unsigned(node_get_result(left)->type)) {
+      instruction = ir_instruction(IR_STORE_SIGNED_HALFWORD);
+    } else {
+      instruction = ir_instruction(IR_STORE_WORD);
+    }
+  } else {
+    instruction = ir_instruction(IR_STORE_WORD);
+  }
 
   ir_operand_copy(instruction, 0,
                   node_get_result(left)->ir_operand);
@@ -545,10 +639,26 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
                                                    struct node *the_operand) {
     struct ir_instruction *add_instruction = ir_instruction(kind);
     struct ir_instruction *constant_inc_instruction = ir_instruction(IR_LOAD_IMMEDIATE);
-    struct ir_instruction *store_instruction = ir_instruction(IR_STORE_WORD);
+    struct ir_instruction *store_instruction;
     struct ir_instruction *copy_instruction = ir_instruction(IR_COPY);
     struct ir_operand *addressOfOperand;
 
+    if(get_width_of_type(node_get_result(the_operand)->type) == 1) {
+      if(!get_type_is_unsigned(node_get_result(the_operand)->type)) {
+	store_instruction = ir_instruction(IR_STORE_SIGNED_BYTE);
+      } else {
+	store_instruction = ir_instruction(IR_STORE_WORD);
+      }
+    } else if(get_width_of_type(node_get_result(the_operand)->type) == 2) {
+      if(!get_type_is_unsigned(node_get_result(the_operand)->type)) {
+	store_instruction = ir_instruction(IR_STORE_SIGNED_HALFWORD);
+      } else {
+	store_instruction = ir_instruction(IR_STORE_WORD);
+      }
+    } else {
+      store_instruction = ir_instruction(IR_STORE_WORD);
+    }
+      
     ir_generate_for_expression(the_operand, NULL, NULL);
     if(!node_get_result(the_operand)->ir_operand->lvalue) {
         ir_generation_num_errors++;
@@ -667,56 +777,6 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
     }
     unary_operation->ir = the_operand->ir;
     node_get_result(unary_operation)->ir_operand = node_get_result(the_operand)->ir_operand;
-}
-
-int get_type_is_unsigned(struct type *type) {
-    bool expr_is_unsigned;
-    switch(type->kind) {
-      case TYPE_BASIC:
-        expr_is_unsigned = type->data.basic.is_unsigned;
-        break;
-      case TYPE_POINTER:
-        expr_is_unsigned = true;
-        break;
-      case TYPE_ARRAY:
-        expr_is_unsigned = get_type_is_unsigned(type->data.array.array_type);
-        break;
-      case TYPE_FUNCTION:
-        expr_is_unsigned = get_type_is_unsigned(type->data.function.return_type);
-        break;
-      case TYPE_LABEL:
-        printf("Cannot cast a label. Incorrect Syntax\n");
-      case TYPE_VOID:
-      default:
-        assert(0);
-        break;
-    }
-    return expr_is_unsigned;
-}
-
-int get_width_of_type(struct type *type) {
-    int width_of_expr;
-    switch(type->kind) {
-      case TYPE_BASIC:
-        width_of_expr = type->data.basic.width;
-        break;
-      case TYPE_POINTER:
-        width_of_expr = TYPE_WIDTH_POINTER;
-        break;
-      case TYPE_ARRAY:
-        width_of_expr = get_width_of_type(type->data.array.array_type);
-        break;
-      case TYPE_FUNCTION:
-        width_of_expr = get_width_of_type(type->data.function.return_type);
-        break;
-      case TYPE_LABEL:
-        printf("Cannot cast a label. Incorrect Syntax\n");
-      case TYPE_VOID:
-      default:
-        assert(0);
-        break;
-    }
-    return width_of_expr;
 }
 
 void ir_generate_for_unary_casting_expr(struct ir_operand *ir_operand,
@@ -1554,6 +1614,10 @@ static void ir_print_opcode(FILE *output, int kind) {
     "CASTWTOSHW",
     "CASTBTOUHW",
     "CASTBTOSHW",
+    "LOADSBYTE",
+    "LOADSHWORD",
+    "STORSBYTE",
+    "STORSHWORD",
     NULL
   };
 
@@ -1619,7 +1683,11 @@ void ir_print_instruction(FILE *output, struct ir_instruction *instruction) {
     case IR_COPY:
     case IR_ADDRESS_OF:
     case IR_LOAD_WORD:
+    case IR_LOAD_SIGNED_HALFWORD:
+    case IR_LOAD_SIGNED_BYTE:
     case IR_STORE_WORD:
+    case IR_STORE_SIGNED_HALFWORD:
+    case IR_STORE_SIGNED_BYTE:
     case IR_BIFEQZ:
     case IR_BIFNOTEQZ:
     case IR_BITWISE_NOT:
