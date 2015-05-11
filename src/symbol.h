@@ -11,6 +11,8 @@ struct type;
 #define BLOCK_SCOPE_SYMBOL_TABLE             2
 
 #define STACK_OFFSET_NOT_YET_DEFINED        -1
+
+#define BEGINNING_STACK_OFFSET             100
 struct symbol {
   char name[MAX_IDENTIFIER_LENGTH + 1];
   struct result result;

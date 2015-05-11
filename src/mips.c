@@ -215,14 +215,15 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     struct ir_instruction *temp_instruction = instruction;
 
     /* To start off, we need storage space for:
-     * 1.  s0 to s7 (32 bytes),
+     * s0 to s7 (32 bytes),
      * a0 - a3 (16 bytes)
+     * t0 - t9 (40 bytes),
      * the old stack frame pointer $fp (4 bytes)
      * the return address $ra (4 bytes)
      * one reserved word (4 bytes)
-     * The minimum space needed = 60 bytes
+     * The minimum space needed = 100 bytes
      */
-    int number_of_bytes_for_frame = 60;
+    int number_of_bytes_for_frame = BEGINNING_STACK_OFFSET;
     int word_aligned_number_of_bytes;
 
     /* Now, find out the additional of memory needed for the function */
@@ -271,7 +272,7 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
 }
 
 void mips_print_load_address(FILE *output, struct ir_instruction *instruction) {
-  int stack_offset = 60;
+  int stack_offset = BEGINNING_STACK_OFFSET;
   fprintf(output, "%10s ", "la");
   mips_print_temporary_operand(output, &instruction->operands[0]);
   fputs(", ", output);
@@ -343,8 +344,24 @@ void mips_print_function_call(FILE *output, struct ir_instruction *instruction) 
     bool isSysFcnCall = (!strcmp(function_name, "print_int") ||
                          !strcmp(function_name, "read_int") ||
                          !strcmp(function_name, "read_string") ||
-                         !strcmp(function_name, "print_string"));
+                         !strcmp(function_name, "print_string") ||
+			 !strcmp(function_name, "exit"));
+
+    /* Save the t-registers */
+    fprintf(output, "\n\t #Save the t-registers \n");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t0", "60($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t1", "64($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t2", "68($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t3", "72($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t4", "76($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t5", "80($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t6", "84($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t7", "88($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t8", "92($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "sw", "$t9", "96($fp)");
+      
     if(!isSysFcnCall) {
+
         fprintf(output, "%10s ", "jal");
         fprintf(output, "%10s\n", function_name);
     } else {
@@ -360,7 +377,10 @@ void mips_print_function_call(FILE *output, struct ir_instruction *instruction) 
         } else if(!strcmp(function_name, "read_int")) {
             fprintf(output, "%10s ", "$v0, ");
             fprintf(output, "%10s ", "5");
-        } else {
+        } else if(!strcmp(function_name, "exit")) {
+            fprintf(output, "%10s ", "$v0, ");
+            fprintf(output, "%10s ", "10");
+	} else {
             printf("Not a system function. Should not come here\n");
             assert(0);
 
@@ -371,6 +391,20 @@ void mips_print_function_call(FILE *output, struct ir_instruction *instruction) 
 
 void mips_print_result_word(FILE *output, struct ir_instruction *instruction) {
     assert(IR_RESULTWORD == instruction->kind);
+
+    /* Restore the t-registers */
+    fprintf(output, "\n\t #Restore the t-registers\n");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t9", "96($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t8", "92($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t7", "88($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t6", "84($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t5", "80($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t4", "76($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t3", "72($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t2", "68($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t1", "64($fp)");
+    fprintf(output, "%10s %10s, %10s\n", "lw", "$t0", "60($fp)");
+
     fprintf(output, "%10s ", "or");
     mips_print_temporary_operand(output, &instruction->operands[0]);
     fprintf(output, ",");
@@ -421,7 +455,7 @@ void mips_print_return(FILE *output, struct ir_instruction *instruction) {
 
 void mips_print_function_end(FILE *output, struct ir_instruction *instruction) {
     struct ir_instruction *temp_instruction = instruction;
-    int number_of_bytes_for_frame = 60;
+    int number_of_bytes_for_frame = BEGINNING_STACK_OFFSET;
     int word_aligned_number_of_bytes;
     assert(IR_FUNCTION_END == instruction->kind);
 
@@ -680,6 +714,10 @@ void mips_print_text_section(FILE *output, struct ir_section *section) {
 
   /* Return from main. */
   fprintf(output, "\n%10s %10s\n", "jr", "$ra");
+
+  /* fprintf(output, "\n%10s %10s\n", "v0", "10"); */
+
+  /* fprintf(output, "%10s\n", "syscall"); */
 }
 
 void mips_print_program(FILE *output, struct ir_section *section) {

@@ -173,6 +173,13 @@ int type_size(struct type *t) {
       return t->data.basic.width;
     case TYPE_POINTER:
       return TYPE_WIDTH_POINTER;
+  case TYPE_ARRAY:
+    return t->data.array.array_size*type_size(t->data.array.array_type);
+  case TYPE_VOID:
+  case TYPE_FUNCTION:
+  case TYPE_LABEL:
+    type_checking_num_errors++;
+    printf("ERROR: These types shouldn't be used in arithmetic operations..\n");
     default:
       return 0;
   }
@@ -294,7 +301,6 @@ void apply_usual_array_unary_conversion(struct node *unary_operation) {
 
     assert(NODE_UNARY_OPERATION == unary_operation->kind);
     assert(operand_type->kind == TYPE_ARRAY);
-    printf("Converting array to pointer.. \n");
     add_cast_expr(the_operand, conversion_type);
     node_get_result(unary_operation)->type = type_pointer(
         node_get_result(the_operand)->type->data.array.array_type);
@@ -305,10 +311,12 @@ void type_assign_in_indirection_operation(struct node *unary_operation) {
     struct node *the_operand = unary_operation->data.unary_operation.the_operand;
     assert(NODE_UNARY_OPERATION == unary_operation->kind);
     assert(UNARYOP_INDIRECTION == unary_operation->data.unary_operation.operation);
-    if(node_get_result(the_operand)->type->kind != TYPE_POINTER) {
-        type_checking_num_errors++; printf("ERROR: operand of unary indirection must be of type pointer\n");
+    if(node_get_result(the_operand)->type->kind == TYPE_POINTER) {
+      node_get_result(unary_operation)->type = node_get_result(the_operand)->type->data.pointer.pointee;
+    } else if(node_get_result(the_operand)->type->kind == TYPE_ARRAY) {
+      node_get_result(unary_operation)->type = node_get_result(the_operand)->type->data.array.array_type;
     } else {
-        node_get_result(unary_operation)->type = node_get_result(the_operand)->type->data.pointer.pointee;
+      type_checking_num_errors++; printf("ERROR: operand of unary indirection must be of type pointer\n");        
     }
 }
 
@@ -441,6 +449,18 @@ void type_convert_arithmetic(struct node *binary_operation) {
   }
 }
 
+void add_pointer_width_to_additive_operation(struct node **expression, struct type *pointee_type) {
+  int width_int = type_size(pointee_type);
+  char pointer_width[1];
+  struct node *width;
+  struct node *multiplicative_expr;
+  sprintf(pointer_width, "%d", width_int);
+    width = node_number(pointer_width);
+    multiplicative_expr = node_binary_operation(width, BINOP_MULTIPLICATION, *expression);
+    node_get_result(multiplicative_expr)->type = type_pointer(pointee_type);
+    *expression = multiplicative_expr;
+}
+
 void type_convert_additive(struct node *binary_operation) {
   struct type *left_operand_type = node_get_result(binary_operation->data.binary_operation.left_operand)->type;
   struct type *right_operand_type = node_get_result(binary_operation->data.binary_operation.right_operand)->type;
@@ -455,6 +475,7 @@ void type_convert_additive(struct node *binary_operation) {
       type_convert_usual_binary(binary_operation);
   } else if (type_is_pointer(left_operand_type) && type_is_arithmetic(right_operand_type)) {
       node_get_result(binary_operation)->type = left_operand_type;
+      add_pointer_width_to_additive_operation(&binary_operation->data.binary_operation.right_operand, left_operand_type->data.pointer.pointee);
   } else if (type_is_arithmetic(left_operand_type) && type_is_pointer(right_operand_type)) {
     switch(binary_operation->data.binary_operation.operation) {
     case BINOP_ADDITION:
@@ -481,8 +502,8 @@ void type_convert_additive(struct node *binary_operation) {
 bool types_are_compatible(struct type *left, /* in */
                           struct type *right /* in */) {
     bool compatible = false;
-    printf("Type of left: %d\n", left->kind);
-    printf("Type of right: %d\n", right->kind);
+    /* printf("Type of left: %d\n", left->kind); */
+    /* printf("Type of right: %d\n", right->kind); */
     if(type_is_pointer(left) && type_is_pointer(right)) {
         compatible = types_are_compatible(left->data.pointer.pointee, right->data.pointer.pointee);
     } else if (type_is_arithmetic(left) && type_is_arithmetic(right)) {
@@ -679,8 +700,8 @@ void type_assign_in_expression_list(struct node *expression_list,
   (*number_of_parameters)++;
   if(expression_list->data.expression_list.assignment_expr != NULL) {
       type_assign_in_expression(expression_list->data.expression_list.assignment_expr);
-      printf("Type of prototype argument: %d\n", parameter_list->symbol.result.type->kind);
-      printf("Type of function call argument: %d\n", node_get_result(expression_list->data.expression_list.assignment_expr)->type->kind);
+      /* printf("Type of prototype argument: %d\n", parameter_list->symbol.result.type->kind); */
+      /* printf("Type of function call argument: %d\n", node_get_result(expression_list->data.expression_list.assignment_expr)->type->kind); */
       if(!types_are_compatible(parameter_list->symbol.result.type,
                                node_get_result(expression_list->data.expression_list.assignment_expr)->type)) {
           type_checking_num_errors++;
@@ -714,8 +735,6 @@ void type_assign_in_function_call(struct node *function_call) {
     postfix_expr_type = node_get_result(function_call->data.function_call.postfix_expr)->type;
     assert(postfix_expr_type->kind == TYPE_FUNCTION);
     return_type_of_function = postfix_expr_type->data.function.return_type;
-    printf("Return type of postfix expr: %d\n", return_type_of_function->kind);
-    printf("Number of parameters: %d\n", postfix_expr_type->data.function.number_of_parameters);
     parameter_list = postfix_expr_type->data.function.parameter_list;
     if(function_call->data.function_call.expression_list != NULL) {
         type_assign_in_expression_list(function_call->data.function_call.expression_list,
@@ -743,7 +762,6 @@ void type_assign_in_compound_statement(struct node *compound_statement) {
 }
 
 void type_assign_in_statement(struct node *statement) {
-  printf("Statement kind: %d\n", statement->kind);
   assert(NODE_STATEMENT == statement->kind);
   if (NULL != statement->data.statement.statement) {
       if(statement->data.statement.statement->kind == NODE_STATEMENT) {
@@ -752,9 +770,6 @@ void type_assign_in_statement(struct node *statement) {
           assert(statement->data.statement.statement->kind == NODE_COMPOUND_STATEMENT);
           type_assign_in_compound_statement(statement->data.statement.statement);
       }
-  }
-  if(statement->data.statement.type_of_statement== RETURN_STATEMENT_TYPE) {
-      printf("Return statement!\n");
   }
   type_assign_in_expression(statement->data.statement.expression);
 }
@@ -780,6 +795,35 @@ void type_assign_in_function_definition(struct node *function_definition) {
     type_assign_in_expression(function_definition->data.function_definition.compound_statement);
 }
 
+void type_assign_in_if_statement(struct node *if_statement) {
+    struct node *expr = if_statement->data.if_statement.expr;
+  struct node *if_statement_within = if_statement->data.if_statement.if_statement;
+  struct node *else_statement_within = if_statement->data.if_statement.else_statement;
+  assert(NODE_IF_STATEMENT == if_statement->kind);
+  if(NULL != expr) {
+    type_assign_in_expression(expr);
+  }
+  
+  if (NULL != if_statement_within) {
+    if(if_statement_within->kind == NODE_STATEMENT) {
+      type_assign_in_statement(if_statement_within);
+    } else {
+      assert(if_statement_within->kind == NODE_COMPOUND_STATEMENT);
+      type_assign_in_compound_statement(if_statement_within);
+    }
+  }
+
+  if (NULL != else_statement_within) {
+    if(else_statement_within->kind == NODE_STATEMENT) {
+	type_assign_in_statement(else_statement_within);
+    } else {
+      assert(else_statement_within->kind == NODE_COMPOUND_STATEMENT);
+      type_assign_in_compound_statement(else_statement_within);
+    }
+  }
+  
+}
+
 void type_assign_in_expression(struct node *expression) {
   switch (expression->kind) {
     case NODE_UNARY_OPERATION:
@@ -787,7 +831,6 @@ void type_assign_in_expression(struct node *expression) {
       break;
 
     case NODE_IDENTIFIER:
-      printf("Name : %s\n", expression->data.identifier.symbol->name);
       if (NULL == expression->data.identifier.symbol->result.type) {
           printf("ERROR: The identifier's type should have been defined by now\n");
           assert(0);
@@ -833,6 +876,7 @@ void type_assign_in_expression(struct node *expression) {
     case NODE_TRANSLATION_UNIT:
       break;
     case NODE_IF_STATEMENT:
+      type_assign_in_if_statement(expression);
       break;
     case NODE_POINTER_DECLARATOR:
       break;

@@ -229,7 +229,6 @@ struct node *node_pointer(struct node *pointer) {
 
 struct node *node_type_specifier(int kind_of_type_specifier) {
     struct node *node = node_create(NODE_TYPE_SPECIFIER);
-    /* printf("Creating type specifier of kind %d\n", kind_of_type_specifier); */
     node->data.type_specifier.kind_of_type_specifier = kind_of_type_specifier;
     return node;
 }
@@ -1055,7 +1054,6 @@ void node_print_translation_unit(FILE *output, struct node *translation_unit) {
     node_print_translation_unit(output, translation_unit->data.translation_unit.translation_unit);
   }
   if(translation_unit->data.translation_unit.top_level_decl != NULL) {
-      printf("Kind: %d",translation_unit->data.translation_unit.top_level_decl->kind);
     node_print_handler(output, translation_unit->data.translation_unit.top_level_decl);
   }
 }

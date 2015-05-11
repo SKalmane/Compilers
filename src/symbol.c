@@ -34,7 +34,6 @@ struct symbol *symbol_get(struct symbol_table *table, char name[]) {
   struct symbol_list *iter;
   while(present_symbol_table != NULL) {
       for (iter = present_symbol_table->variables; NULL != iter; iter = iter->next) {
-          /* printf("Present symbol name: %s\n", iter->symbol.name); */
           if (!strcmp(name, iter->symbol.name)) {
               return &iter->symbol;
           }
@@ -102,7 +101,7 @@ void symbol_add_to_function_parameter_list(struct type *function_type,
 
     function_type->data.function.number_of_parameters++;
     if(table->variables != NULL) {
-      table->variables->symbol.stack_offset = -60 +
+      table->variables->symbol.stack_offset = -BEGINNING_STACK_OFFSET +
 	function_type->data.function.number_of_parameters*4;
     }
 }
@@ -192,7 +191,6 @@ void symbol_add_from_expr(struct symbol_table *table, struct node *expr) {
 
 void symbol_add_from_comma_expr(struct symbol_table *table, struct node *comma_expr, struct type **type) {
   assert(NODE_COMMA_EXPR == comma_expr->kind);
-  printf("------------- Comma expr.. %d\n", type == NULL);
   if(comma_expr->data.comma_expr.expr != NULL) {
       symbol_add_from_expression(table, comma_expr->data.comma_expr.expr, type);
   }

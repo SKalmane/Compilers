@@ -107,12 +107,8 @@ static void assign_stack_offsets_to_variables(struct node *identifier) {
     if(((table->type_of_symbol_table == FUNCTION_SCOPE_SYMBOL_TABLE) ||
         (table->type_of_symbol_table == BLOCK_SCOPE_SYMBOL_TABLE)) &&
        (symbol->stack_offset == STACK_OFFSET_NOT_YET_DEFINED)) {
-        printf("Assigning stack offsets to variables.. \n Stack offset at present: %d\n",
-               table->total_stack_offset);
         switch (type->kind) {
           case TYPE_BASIC:
-            printf("Identifier name: %s\n",
-                   identifier->data.identifier.name);
             symbol->stack_offset = table->total_stack_offset;
             table->total_stack_offset += type->data.basic.width;
             break;
@@ -365,12 +361,6 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
       printf("ERROR: The left hand side of assignment operation is not an lvalue\n");
   }
 
-  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand, NULL, NULL);
-
-  if(node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand->lvalue) {
-      ir_generate_for_conversion_to_rvalue(binary_operation->data.binary_operation.right_operand);
-  }
-
   if(get_width_of_type(node_get_result(left)->type) == 1) {
     if(!get_type_is_unsigned(node_get_result(left)->type)) {
       instruction = ir_instruction(IR_STORE_SIGNED_BYTE);
@@ -384,12 +374,21 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
 	instruction = ir_instruction(IR_STORE_WORD);
     }
   } else {
-    instruction = ir_instruction(IR_STORE_WORD);
+    if(node_get_result(left)->type->kind == TYPE_POINTER) {
+      instruction = ir_instruction(IR_STORE_WORD);
+    } else {
+      instruction = ir_instruction(IR_STORE_WORD);
+    }
   }
-
   ir_operand_copy(instruction, 0,
                   node_get_result(left)->ir_operand);
 
+  ir_generate_for_expression(binary_operation->data.binary_operation.right_operand, NULL, NULL);
+  
+  if(node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand->lvalue) {
+      ir_generate_for_conversion_to_rvalue(binary_operation->data.binary_operation.right_operand);
+  }
+  
   ir_operand_copy(instruction, 1,
                   node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
 
@@ -639,10 +638,12 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
                                                    struct node *the_operand) {
     struct ir_instruction *add_instruction = ir_instruction(kind);
     struct ir_instruction *constant_inc_instruction = ir_instruction(IR_LOAD_IMMEDIATE);
+    struct ir_instruction *constant_inc_instruction2;
     struct ir_instruction *store_instruction;
     struct ir_instruction *copy_instruction = ir_instruction(IR_COPY);
     struct ir_operand *addressOfOperand;
-
+    int multiplicative_factor_for_pointer = -1;
+    struct ir_instruction *mult_instruction;
     if(get_width_of_type(node_get_result(the_operand)->type) == 1) {
       if(!get_type_is_unsigned(node_get_result(the_operand)->type)) {
 	store_instruction = ir_instruction(IR_STORE_SIGNED_BYTE);
@@ -658,7 +659,13 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     } else {
       store_instruction = ir_instruction(IR_STORE_WORD);
     }
-      
+
+    if(node_get_result(the_operand)->type->kind == TYPE_POINTER) {
+      multiplicative_factor_for_pointer = type_size(node_get_result(the_operand)->type->data.pointer.pointee);
+    } else if(node_get_result(the_operand)->type->kind == TYPE_ARRAY) {
+      multiplicative_factor_for_pointer = type_size(node_get_result(the_operand)->type->data.array.array_type);
+    }
+    
     ir_generate_for_expression(the_operand, NULL, NULL);
     if(!node_get_result(the_operand)->ir_operand->lvalue) {
         ir_generation_num_errors++;
@@ -667,15 +674,32 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
 
     addressOfOperand = node_get_result(the_operand)->ir_operand;
 
-    /* Convert the operand to an rvalue */
-    ir_generate_for_conversion_to_rvalue(the_operand);
-
     /* Create the constInt instruction for the number 1 */
     ir_operand_temporary(constant_inc_instruction, 0);
     constant_inc_instruction->operands[1].kind = OPERAND_NUMBER;
     constant_inc_instruction->operands[1].data.number = 1;
     constant_inc_instruction->operands[1].lvalue = false;
 
+    if(multiplicative_factor_for_pointer != -1) {
+      constant_inc_instruction2 = ir_instruction(IR_LOAD_IMMEDIATE);
+      ir_operand_temporary(constant_inc_instruction2, 0);
+      constant_inc_instruction2->operands[1].kind = OPERAND_NUMBER;
+      constant_inc_instruction2->operands[1].data.number = multiplicative_factor_for_pointer;
+      constant_inc_instruction2->operands[1].lvalue = false;
+
+      mult_instruction = ir_instruction(IR_MULTIPLY);
+      ir_operand_temporary(mult_instruction, 0);
+      ir_operand_copy(mult_instruction, 1,
+		      &constant_inc_instruction2->operands[0]);
+      ir_operand_copy(mult_instruction, 2,
+		      &constant_inc_instruction->operands[0]);
+    } else {
+      mult_instruction = constant_inc_instruction;
+    }
+
+    /* Convert the operand to an rvalue */
+    ir_generate_for_conversion_to_rvalue(the_operand);
+    
     if(!is_prefix) {
       /* Copy the rvalue to another operand 
        * This will be used if it is a postfix
@@ -683,14 +707,15 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
       ir_operand_temporary(copy_instruction, 0);
       ir_operand_copy(copy_instruction, 1,
 		      node_get_result(the_operand)->ir_operand);
+      /* copy_instruction->operands[0].lvalue = true; */
     }
-    
+
     /* Add/Subtract 1 to the operand */
     ir_operand_temporary(add_instruction, 0);
     ir_operand_copy(add_instruction, 1,
                   node_get_result(the_operand)->ir_operand);
     ir_operand_copy(add_instruction, 2,
-                    &constant_inc_instruction->operands[0]);
+                    &mult_instruction->operands[0]);
 
     /*Store the value back into the operand */
     ir_operand_copy(store_instruction, 0, addressOfOperand);
@@ -699,6 +724,10 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
       ir_append(the_operand->ir, copy_instruction);
     }
     ir_append(the_operand->ir, constant_inc_instruction);
+    if(multiplicative_factor_for_pointer != -1) {
+      ir_append(the_operand->ir, constant_inc_instruction2);
+    }
+    ir_append(the_operand->ir, mult_instruction);
     ir_append(the_operand->ir, add_instruction);
     ir_append(the_operand->ir, store_instruction);
 
@@ -720,6 +749,39 @@ void ir_generate_for_simple_unary_operation(int kind, struct node *the_operand) 
     ir_append(the_operand->ir, instruction);
     node_get_result(the_operand)->ir_operand = &instruction->operands[0];
     node_get_result(the_operand)->ir_operand->lvalue = false;
+}
+
+void ir_generate_load_statement_for_indirection(struct node *indirection_node) {
+    struct ir_instruction *instruction;
+    struct type *pointee_type;
+    assert(node_get_result(indirection_node)->type->kind == TYPE_POINTER);
+    /* Do nothing if the node is already an rvalue */
+    if(!node_get_result(indirection_node)->ir_operand->lvalue) {
+      return;
+    }
+    /* pointee_type = node_get_result(indirection_node)->type->data.pointer.pointee; */
+    pointee_type = node_get_result(indirection_node)->type;
+    if(get_width_of_type(pointee_type) == 1) {
+      if(!get_type_is_unsigned(pointee_type)) {
+	instruction = ir_instruction(IR_LOAD_SIGNED_BYTE);
+      } else {
+	instruction = ir_instruction(IR_LOAD_WORD);
+      }
+    } else if(get_width_of_type(pointee_type) == 2) {
+      if(!get_type_is_unsigned(pointee_type)) {
+	instruction = ir_instruction(IR_LOAD_SIGNED_HALFWORD);
+      } else {
+	instruction = ir_instruction(IR_LOAD_WORD);
+      }
+    } else {
+      instruction = ir_instruction(IR_LOAD_WORD);
+    }
+    
+    ir_operand_temporary(instruction, 0);
+    ir_operand_copy(instruction, 1,
+                    node_get_result(indirection_node)->ir_operand);
+    indirection_node->ir = ir_append(indirection_node->ir, instruction);
+    node_get_result(indirection_node)->ir_operand = &instruction->operands[0];
 }
 
 void ir_generate_for_unary_operation(struct node *unary_operation) {
@@ -767,8 +829,12 @@ void ir_generate_for_unary_operation(struct node *unary_operation) {
         break;
       case UNARYOP_INDIRECTION:
         ir_generate_for_expression(the_operand, NULL, NULL);
-        ir_generate_for_conversion_to_rvalue(the_operand);
-        node_get_result(the_operand)->ir_operand->lvalue = true;
+	if(node_get_result(the_operand)->type->kind == TYPE_POINTER) {
+	  ir_generate_load_statement_for_indirection(the_operand);
+	  node_get_result(the_operand)->ir_operand->lvalue = true;
+	} else if(node_get_result(the_operand)->type->kind != TYPE_ARRAY) {
+	  ir_generation_num_errors++; printf("Unary Indirection operand must be of type array or pointer..\n");
+	}
         break;
       default:
         printf("Kind of unary operation: %d\n", unary_operation->data.unary_operation.operation);
@@ -1152,6 +1218,7 @@ void ir_generate_for_return_statement(struct node *return_statement,
   instruction = ir_instruction(IR_RETURN);
   if(expression != NULL) {
       ir_generate_for_expression(expression, NULL, NULL);
+      /* ir_generate_for_conversion_to_rvalue(expression); */
       ir_operand_copy(instruction, 0, node_get_result(expression)->ir_operand);
   } else {
       instruction->operands[0].kind = OPERAND_NULL;
@@ -1221,7 +1288,10 @@ void ir_generate_for_expression_list(struct node *expression_list, int *num_of_p
         expression_list->ir = ir_copy(expression_list_within->ir);
     }
     ir_generate_for_expression(assignment_expr, NULL, NULL);
-    ir_generate_for_conversion_to_rvalue(assignment_expr);
+    if((node_get_result(assignment_expr)->type->kind != TYPE_POINTER) &&
+       (node_get_result(assignment_expr)->type->kind != TYPE_ARRAY)) {
+      ir_generate_for_conversion_to_rvalue(assignment_expr);
+    }
     instruction = ir_instruction(IR_FUNCTION_PARAMETER);
 
     instruction->operands[0].kind = OPERAND_NUMBER;
@@ -1321,6 +1391,7 @@ void ir_generate_for_do_statement(struct node *do_statement,
   ir_generate_for_expression(statement_within, function_end_label, label_instruction2);
 
   ir_generate_for_expression(expression, NULL, NULL);
+  ir_generate_for_conversion_to_rvalue(expression);
   gotoIfFalse_instruction = ir_instruction(IR_GOTO_IF_FALSE);
   ir_generate_gotoFalseOrTrue(gotoIfFalse_instruction, node_get_result(expression)->ir_operand, label_instruction2);
 
@@ -1528,9 +1599,7 @@ void ir_generate_for_translation_unit(struct node *translation_unit) {
 
   assert(NODE_TRANSLATION_UNIT == translation_unit->kind);
   if (NULL != translation_unit_within) {
-      printf("Translation Unit kind: %d\n", translation_unit_within->kind);
     ir_generate_for_translation_unit(translation_unit_within);
-    printf("Top level decl kind: %d\n", top_level_decl == NULL);
     ir_generate_for_expression(top_level_decl, NULL, NULL);
     translation_unit->ir = ir_concatenate(translation_unit_within->ir, top_level_decl->ir);
   } else {
