@@ -254,7 +254,7 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     fprintf(output, "\t# one reserved word (4 bytes). \n");
     fprintf(output, "\t# The minimum space needed = 100 bytes \n");
 
-    
+
     /* Print all the stack frame related instructions */
     fprintf(output, "%10s %10s, %10s, %10d\n", "addi", "$sp", "$sp", -(word_aligned_number_of_bytes));
     /* Store the old frame pointer */
@@ -369,7 +369,7 @@ void mips_print_function_call(FILE *output, struct ir_instruction *instruction) 
     fprintf(output, "%10s %10s, %10s\n", "sw", "$t7", "88($fp)");
     fprintf(output, "%10s %10s, %10s\n", "sw", "$t8", "92($fp)");
     fprintf(output, "%10s %10s, %10s\n", "sw", "$t9", "96($fp)");
-      
+
     if(!isSysFcnCall) {
 
         fprintf(output, "%10s ", "jal");

@@ -316,7 +316,7 @@ void type_assign_in_indirection_operation(struct node *unary_operation) {
     } else if(node_get_result(the_operand)->type->kind == TYPE_ARRAY) {
       node_get_result(unary_operation)->type = node_get_result(the_operand)->type->data.array.array_type;
     } else {
-      type_checking_num_errors++; printf("ERROR: operand of unary indirection must be of type pointer\n");        
+      type_checking_num_errors++; printf("ERROR: operand of unary indirection must be of type pointer\n");
     }
 }
 
@@ -801,7 +801,7 @@ void type_assign_in_if_statement(struct node *if_statement) {
   if(NULL != expr) {
     type_assign_in_expression(expr);
   }
-  
+
   if (NULL != if_statement_within) {
     if(if_statement_within->kind == NODE_STATEMENT) {
       type_assign_in_statement(if_statement_within);
@@ -813,7 +813,7 @@ void type_assign_in_if_statement(struct node *if_statement) {
       type_assign_in_expression(if_statement_within);
     }
   }
-  
+
   if (NULL != else_statement_within) {
     if(else_statement_within->kind == NODE_STATEMENT) {
       type_assign_in_statement(else_statement_within);

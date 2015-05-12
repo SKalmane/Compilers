@@ -33,7 +33,7 @@ void remove_no_ops_from_ir(struct ir_section **root_ir) {
     ir_section->first = ir_section->first->next;
     ir_section->first->next->prev = NULL;
   }
-  
+
   *root_ir = ir_section;
 }
 
@@ -42,7 +42,7 @@ void remove_redundant_gotos(struct ir_section **root_ir) {
   struct ir_instruction *instruction = ir_section->first;
   int generated_label;
   struct ir_instruction *temp_instruction;
-  
+
   while(instruction->next != NULL) {
     if(instruction->kind == IR_GOTO) {
       assert(instruction->operands[0].kind == OPERAND_GENERATED_LABEL);
@@ -67,7 +67,7 @@ void remove_redundant_gotos(struct ir_section **root_ir) {
     }
     instruction = instruction->next;
   }
-  
+
   *root_ir = ir_section;
 }
 
@@ -77,7 +77,7 @@ void remove_redundant_labels(struct ir_section **root_ir) {
   int generated_label;
   struct ir_instruction *temp_instruction;
   bool label_found = false;
-  
+
   while(instruction->next != NULL) {
     if(instruction->kind == IR_GENERATED_LABEL) {
       label_found = false;
@@ -112,23 +112,23 @@ void remove_redundant_labels(struct ir_section **root_ir) {
 	    break;
 	  }
 	  temp_instruction = temp_instruction->prev;
-	}	
+	}
       }
 
       if(label_found == false) {
-	ir_remove_next_instruction(instruction->prev);	
+	ir_remove_next_instruction(instruction->prev);
       }
     }
     instruction = instruction->next;
   }
-  
+
   *root_ir = ir_section;
 }
 
 struct basic_block* add_to_basic_block(struct ir_instruction *beginning,
 				       struct ir_instruction *end) {
   struct basic_block *basic_block;
-  
+
   basic_block = malloc(sizeof(struct basic_block *));
   basic_block->ir_section = ir_section(beginning, end);
   basic_block->beginning = beginning;
@@ -136,13 +136,13 @@ struct basic_block* add_to_basic_block(struct ir_instruction *beginning,
   basic_block->next = NULL;
   basic_block->left = NULL;
   basic_block->right = NULL;
-  
+
   return basic_block;
 }
 
 struct basic_block * get_basic_blocks_from_ir(struct ir_section *root_ir) {
   struct ir_instruction *instruction = root_ir->first;
-  
+
   struct ir_instruction *beginning_of_basic_block = root_ir->first;
 
   struct ir_instruction *end_of_basic_block = NULL;
@@ -150,7 +150,7 @@ struct basic_block * get_basic_blocks_from_ir(struct ir_section *root_ir) {
   struct basic_block *root_basic_block = NULL, *basic_block = NULL;
   bool basic_block_found = false;
   int instruction_number = 0;
-  
+
   while(instruction->next != NULL) {
     if((instruction->kind == IR_GOTO) ||
        (instruction->kind == IR_GOTO_IF_FALSE) ||
@@ -160,7 +160,7 @@ struct basic_block * get_basic_blocks_from_ir(struct ir_section *root_ir) {
       end_of_basic_block = instruction;
       basic_block_found = true;
     }
-    
+
     if(basic_block_found) {
       if(root_basic_block == NULL) {
 	root_basic_block = add_to_basic_block(beginning_of_basic_block,
@@ -201,7 +201,6 @@ void propagate_constant_values(struct ir_section **root_ir) {
 
   basic_block = get_basic_blocks_from_ir(*root_ir);
 
-  
-  
-}
 
+
+}

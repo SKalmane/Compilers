@@ -312,7 +312,7 @@ int main(int argc, char **argv) {
       fprintf(stdout, "Parser ran out of memory.\n");
       return 2;
   }
-  
+
   fprintf(stdout, "\n=============== PARSE TREE ===============\n");
   node_print_translation_unit(stdout, root_node);
   if (0 == strcmp("parser", stage)) {
@@ -365,7 +365,7 @@ int main(int argc, char **argv) {
     mips_print_program(stdout, root_node->ir);
     fputs("\n\n", stdout);
   }
-  
+
   /* Optimizations */
   remove_no_ops_from_ir(&root_node->ir);
   fprintf(stdout, "\n========= REMOVING NO OPS ================\n");
@@ -386,6 +386,6 @@ int main(int argc, char **argv) {
 
   mips_print_program(output, root_node->ir);
   fputs("\n\n", output);
-  
+
   return 0;
 }

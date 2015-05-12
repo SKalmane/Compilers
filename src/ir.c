@@ -307,7 +307,7 @@ void ir_generate_for_conversion_to_rvalue(struct node *lvalue_node) {
     } else {
       instruction = ir_instruction(IR_LOAD_WORD);
     }
-    
+
     ir_operand_temporary(instruction, 0);
     ir_operand_copy(instruction, 1,
                     node_get_result(lvalue_node)->ir_operand);
@@ -384,11 +384,11 @@ void ir_generate_for_simple_assignment(struct node *binary_operation) {
                   node_get_result(left)->ir_operand);
 
   ir_generate_for_expression(binary_operation->data.binary_operation.right_operand, NULL, NULL);
-  
+
   if(node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand->lvalue) {
       ir_generate_for_conversion_to_rvalue(binary_operation->data.binary_operation.right_operand);
   }
-  
+
   ir_operand_copy(instruction, 1,
                   node_get_result(binary_operation->data.binary_operation.right_operand)->ir_operand);
 
@@ -665,7 +665,7 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     } else if(node_get_result(the_operand)->type->kind == TYPE_ARRAY) {
       multiplicative_factor_for_pointer = type_size(node_get_result(the_operand)->type->data.array.array_type);
     }
-    
+
     ir_generate_for_expression(the_operand, NULL, NULL);
     if(!node_get_result(the_operand)->ir_operand->lvalue) {
         ir_generation_num_errors++;
@@ -699,9 +699,9 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
 
     /* Convert the operand to an rvalue */
     ir_generate_for_conversion_to_rvalue(the_operand);
-    
+
     if(!is_prefix) {
-      /* Copy the rvalue to another operand 
+      /* Copy the rvalue to another operand
        * This will be used if it is a postfix
        * increment/decrement operation */
       ir_operand_temporary(copy_instruction, 0);
@@ -776,7 +776,7 @@ void ir_generate_load_statement_for_indirection(struct node *indirection_node) {
     } else {
       instruction = ir_instruction(IR_LOAD_WORD);
     }
-    
+
     ir_operand_temporary(instruction, 0);
     ir_operand_copy(instruction, 1,
                     node_get_result(indirection_node)->ir_operand);
