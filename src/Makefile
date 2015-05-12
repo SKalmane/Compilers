@@ -38,8 +38,10 @@ type.o : type.c type.h symbol.h node.h
 
 ir.o : ir.c ir.h type.h symbol.h node.h
 
+basic_blocks.o : basic_blocks.c basic_blocks.h ir.h
+
 mips.o : mips.c mips.h ir.h type.h symbol.h node.h
 
-compiler.o : compiler.c mips.h ir.h type.h symbol.h node.h parser.h scanner.h
-compiler: compiler.o parser.o scanner.o node.o symbol.o type.o ir.o mips.o
+compiler.o : compiler.c mips.h ir.h type.h symbol.h node.h parser.h scanner.h basic_blocks.h
+compiler: compiler.o parser.o scanner.o node.o symbol.o type.o ir.o mips.o basic_blocks.o
 	$(CC) -o $@ $(LDFLAGS) $^ $(LDLIBS) $(CFLAGS)

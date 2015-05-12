@@ -807,21 +807,26 @@ void type_assign_in_if_statement(struct node *if_statement) {
   if (NULL != if_statement_within) {
     if(if_statement_within->kind == NODE_STATEMENT) {
       type_assign_in_statement(if_statement_within);
-    } else {
-      assert(if_statement_within->kind == NODE_COMPOUND_STATEMENT);
+    } else if(if_statement_within->kind == NODE_COMPOUND_STATEMENT) {
       type_assign_in_compound_statement(if_statement_within);
-    }
-  }
-
-  if (NULL != else_statement_within) {
-    if(else_statement_within->kind == NODE_STATEMENT) {
-	type_assign_in_statement(else_statement_within);
+    } else if(else_statement_within->kind == NODE_IF_STATEMENT) {
+      type_assign_in_if_statement(if_statement_within);
     } else {
-      assert(else_statement_within->kind == NODE_COMPOUND_STATEMENT);
-      type_assign_in_compound_statement(else_statement_within);
+      type_assign_in_expression(if_statement_within);
     }
   }
   
+  if (NULL != else_statement_within) {
+    if(else_statement_within->kind == NODE_STATEMENT) {
+      type_assign_in_statement(else_statement_within);
+    } else if(else_statement_within->kind == NODE_COMPOUND_STATEMENT) {
+      type_assign_in_compound_statement(else_statement_within);
+    } else if(else_statement_within->kind == NODE_IF_STATEMENT) {
+      type_assign_in_if_statement(else_statement_within);
+    } else {
+      type_assign_in_expression(else_statement_within);
+    }
+  }
 }
 
 void type_assign_in_expression(struct node *expression) {

@@ -15,12 +15,18 @@ void print_fizz_buzz(int length) {
       for(i = 1; i <= len; ++i) {
         remainderOnDividingByThree = (i % 3);
         remainderOnDividingByFive = (i % 5);
-        if((!remainderOnDividingByThree) && (!remainderOnDividingByFive)) {
+        if(!(i % 3) && !(i % 5)) {
+	  print_int(i);
+	  print_string("     ");
 	  print_string("FizzBuzz\n");
-        } else if(!remainderOnDividingByFive) {
+        } else if(!(i % 5)) {
+	  print_int(i);
+	  print_string("     ");
 	  print_string("Fizz\n");
-        } else if(!remainderOnDividingByThree) {
-	  print_string("Buzz\n");
+        } else if(!(i % 3)) {
+	  print_int(i);
+	  print_string("     ");
+	  print_string("Buzz\n");	  
         }
       }
     }

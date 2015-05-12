@@ -111,6 +111,9 @@ void ir_generate_for_program(struct node *program);
 
 void ir_print_section(FILE *output, struct ir_section *section);
 
+void ir_print_section_reverse(FILE *output, struct ir_section *section);
+
+struct ir_section *ir_section(struct ir_instruction *first, struct ir_instruction *last);
 
 extern FILE *error_output;
 extern int ir_generation_num_errors;

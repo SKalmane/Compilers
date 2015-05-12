@@ -726,8 +726,8 @@ void ir_generate_for_increment_decrement_operation(int kind, int is_prefix,
     ir_append(the_operand->ir, constant_inc_instruction);
     if(multiplicative_factor_for_pointer != -1) {
       ir_append(the_operand->ir, constant_inc_instruction2);
+      ir_append(the_operand->ir, mult_instruction);
     }
-    ir_append(the_operand->ir, mult_instruction);
     ir_append(the_operand->ir, add_instruction);
     ir_append(the_operand->ir, store_instruction);
 
@@ -1810,5 +1810,17 @@ void ir_print_section(FILE *output, struct ir_section *section) {
     ir_print_instruction(output, iter);
     fprintf(output, "\n");
     iter = iter->next;
+  }
+}
+
+void ir_print_section_reverse(FILE *output, struct ir_section *section) {
+  int i = 0;
+  struct ir_instruction *iter = section->last;
+  struct ir_instruction *next = NULL;
+  while (NULL != iter && section->first != next) {
+    fprintf(output, "%5d     ", i++);
+    ir_print_instruction(output, iter);
+    fprintf(output, "\n");
+    iter = iter->prev;
   }
 }
