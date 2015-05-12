@@ -245,6 +245,16 @@ void mips_print_function(FILE *output, struct ir_instruction *instruction) {
     mips_print_identifier_operand(output, &instruction->operands[0]);
     fputs(":\n", output);
 
+    fprintf(output, "\t#To start off, we need storage space for\n");
+    fprintf(output, "\t# s0 to s7 (32 bytes), \n");
+    fprintf(output, "\t# a0 - a3 (16 bytes), \n");
+    fprintf(output, "\t# t0 - t9 (40 bytes), \n");
+    fprintf(output, "\t# the old stack frame pointer $fp (4 bytes), \n");
+    fprintf(output, "\t# the return address $ra (4 bytes), \n");
+    fprintf(output, "\t# one reserved word (4 bytes). \n");
+    fprintf(output, "\t# The minimum space needed = 100 bytes \n");
+
+    
     /* Print all the stack frame related instructions */
     fprintf(output, "%10s %10s, %10s, %10d\n", "addi", "$sp", "$sp", -(word_aligned_number_of_bytes));
     /* Store the old frame pointer */

@@ -312,9 +312,10 @@ int main(int argc, char **argv) {
       fprintf(stdout, "Parser ran out of memory.\n");
       return 2;
   }
+  
+  fprintf(stdout, "\n=============== PARSE TREE ===============\n");
+  node_print_translation_unit(stdout, root_node);
   if (0 == strcmp("parser", stage)) {
-    fprintf(stdout, "=============== PARSE TREE ===============\n");
-    node_print_translation_unit(stdout, root_node);
     return 0;
   }
 
@@ -325,10 +326,10 @@ int main(int argc, char **argv) {
     print_errors_from_pass(stdout, "Symbol table", symbol_table_num_errors);
     return 3;
   }
-  fprintf(stdout, "================= SYMBOLS ================\n");
+  fprintf(stdout, "\n================= SYMBOLS ================\n");
   symbol_print_table(stdout, &symbol_table);
   if (0 == strcmp("symbol", stage)) {
-    fprintf(stdout, "=============== PARSE TREE ===============\n");
+    fprintf(stdout, "\n=============== PARSE TREE ===============\n");
     node_print_translation_unit(stdout, root_node);
     return 0;
   }
@@ -342,7 +343,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  fprintf(stdout, "=============== PARSE TREE ===============\n");
+  fprintf(stdout, "\n=============== PARSE TREE ===============\n");
   node_print_translation_unit(stdout, root_node);
   if (0 == strcmp("parser", stage)) {
     return 0;
@@ -353,35 +354,32 @@ int main(int argc, char **argv) {
     print_errors_from_pass(stdout, "IR generation", ir_generation_num_errors);
     return 5;
   }
-  fprintf(stdout, "=================== IR ===================\n");
+  fprintf(stdout, "\n=================== IR ===================\n");
   ir_print_section(stdout, root_node->ir);
-  fprintf(stdout, "=============== IR REVERSE ================\n");
-  ir_print_section_reverse(stdout, root_node->ir);
   if (0 == strcmp("ir", stage)) {
     return 0;
   }
 
   if (0 == strcmp("mips", stage)) {
-    fprintf(stdout, "================== MIPS ==================\n");
+    fprintf(stdout, "\n================== MIPS ==================\n");
     mips_print_program(stdout, root_node->ir);
     fputs("\n\n", stdout);
   }
   
   /* Optimizations */
   remove_no_ops_from_ir(&root_node->ir);
-  fprintf(stdout, "========= REMOVING NO OPS ================\n");
+  fprintf(stdout, "\n========= REMOVING NO OPS ================\n");
   ir_print_section(stdout, root_node->ir);
   fputs("\n\n", stdout);
   remove_redundant_gotos(&root_node->ir);
   remove_redundant_gotos(&root_node->ir);
-  fprintf(stdout, "===== REMOVING REDUNDANT GOTOS  ===========\n");
+  fprintf(stdout, "\n===== REMOVING REDUNDANT GOTOS  ===========\n");
   ir_print_section(stdout, root_node->ir);
   fputs("\n\n", stdout);
   remove_redundant_labels(&root_node->ir);
-  fprintf(stdout, "===== REMOVING REDUNDANT LABELS ===========\n");
+  fprintf(stdout, "\n===== REMOVING REDUNDANT LABELS ===========\n");
   ir_print_section(stdout, root_node->ir);
   fputs("\n\n", stdout);
-  propagate_constant_values(&root_node->ir);
   if (0 == strcmp("optims", stage)) {
     return 0;
   }

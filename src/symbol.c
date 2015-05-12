@@ -795,6 +795,7 @@ void symbol_print_type(FILE *output, struct type *type) {
             fprintf(output, "int\n");
             break;
         }
+	fprintf(output, "===\n");
         break;
       case TYPE_VOID:
         fprintf(output, "      Type: Void Type \n");
@@ -819,7 +820,7 @@ void symbol_print_type(FILE *output, struct type *type) {
         fprintf(output, "*** End Return type: *** \n");
         fprintf(output, " Number of parameters: %d\n", type->data.function.number_of_parameters);
         symbol_list = type->data.function.function_symbol_table->variables;
-        /* symbol_list = type->data.function.parameter_list; */
+        symbol_list = type->data.function.parameter_list;
         for(i = 0; i < type->data.function.number_of_parameters; i++) {
             fprintf(output, " === Parameter %d: \n", i+1);
             symbol_print_type(output, symbol_list->symbol.result.type);
@@ -837,11 +838,11 @@ void symbol_print_type(FILE *output, struct type *type) {
 void symbol_print_table(FILE *output, struct symbol_table *table) {
   struct symbol_list *iter;
 
-  fputs("symbol table:\n", output);
+  fputs("File Scope Symbol table:\n\n", output);
 
   for (iter = table->variables; NULL != iter; iter = iter->next) {
       fprintf(output, "  variable: %s $%p\n", iter->symbol.name, (void *)&iter->symbol);
-    /* symbol_print_type(output, iter->symbol.result.type); */
+    symbol_print_type(output, iter->symbol.result.type);
   }
   fputs("\n", output);
 }

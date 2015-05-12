@@ -1703,9 +1703,8 @@ static void ir_print_operand(FILE *output, struct ir_operand *operand) {
       fprintf(output, "     t%04d", operand->data.temporary);
       break;
     case OPERAND_IDENTIFIER:
-      fprintf(output, "     %p     %s   %d", (void *)operand->data.identifier.symbol,
-              operand->data.identifier.identifier_name,
-              operand->data.identifier.symbol->stack_offset);
+      fprintf(output, "     %p     %s", (void *)operand->data.identifier.symbol,
+              operand->data.identifier.identifier_name);
       break;
     case OPERAND_GENERATED_LABEL:
       fprintf(output, "     __GeneratedLabel_%04d", operand->data.generated_label);

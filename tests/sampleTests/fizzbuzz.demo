@@ -1,0 +1,610 @@
+=================== IR ===================
+    0     NOP       
+    1     NOP       
+    2     NOP       
+    3     PROCBEGIN      0x1cd8dc0     print_fizz_buzz
+    4     NOP       
+    5     NOP       
+    6     ADDRESSOF      t0000,      0x1cd8ee0     len
+    7     ADDRESSOF      t0001,      0x1cd8d20     length
+    8     LOADWORD       t0002,      t0001
+    9     STORWORD       t0000,      t0002
+   10     ADDRESSOF      t0000,      0x1cd8ee0     len
+   11     LOADWORD       t0003,      t0000
+   12     LI             t0001,          1
+   13     LESSTHAN       t0002,      t0003,      t0001
+   14     GOTOIFALSE     t0002,      __GeneratedLabel_0001
+   15     ADDRESSOF      t0005,      __GeneratedStringLabel_0000
+   16     PARAMETER          0,      t0005
+   17     FCNCALL        0x1cd8870     print_string
+   18     RESULWORD      t0006
+   19     GOTO           __GeneratedLabel_0002
+   20     GENLABEL       __GeneratedLabel_0001
+   21     ADDRESSOF      t0000,      0x1cd8e50     i
+   22     LI             t0001,          1
+   23     STORWORD       t0000,      t0001
+   24     GENLABEL       __GeneratedLabel_0003
+   25     ADDRESSOF      t0002,      0x1cd8e50     i
+   26     LOADWORD       t0005,      t0002
+   27     ADDRESSOF      t0003,      0x1cd8ee0     len
+   28     LOADWORD       t0006,      t0003
+   29     LTOREQTO       t0004,      t0005,      t0006
+   30     GOTOIFALSE     t0004,      __GeneratedLabel_0004
+   31     ADDRESSOF      t0012,      __GeneratedStringLabel_0001
+   32     PARAMETER          0,      t0012
+   33     FCNCALL        0x1cd8870     print_string
+   34     RESULWORD      t0013
+   35     ADDRESSOF      t0001,      0x1cd8e50     i
+   36     LOADWORD       t0002,      t0001
+   37     PARAMETER          0,      t0002
+   38     FCNCALL        0x1cd8a50     print_int
+   39     RESULWORD      t0003
+   40     ADDRESSOF      t0001,      __GeneratedStringLabel_0002
+   41     PARAMETER          0,      t0001
+   42     FCNCALL        0x1cd8870     print_string
+   43     RESULWORD      t0002
+   44     ADDRESSOF      t0000,      0x1cd8e50     i
+   45     LOADWORD       t0003,      t0000
+   46     LI             t0001,          3
+   47     REM            t0002,      t0003,      t0001
+   48     LOGICALNOT     t0004,      t0002
+   49     GOTOIFALSE     t0004,      __GeneratedLabel_0005
+   50     ADDRESSOF      t0005,      0x1cd8e50     i
+   51     LOADWORD       t0008,      t0005
+   52     LI             t0006,          5
+   53     REM            t0007,      t0008,      t0006
+   54     LOGICALNOT     t0009,      t0007
+   55     GOTOIFALSE     t0009,      __GeneratedLabel_0005
+   56     LI             t0010,          1
+   57     COPY           t0012,      t0010
+   58     GOTO           __GeneratedLabel_0006
+   59     GENLABEL       __GeneratedLabel_0005
+   60     LI             t0011,          0
+   61     COPY           t0012,      t0011
+   62     GENLABEL       __GeneratedLabel_0006
+   63     GOTOIFALSE     t0012,      __GeneratedLabel_0007
+   64     ADDRESSOF      t0014,      __GeneratedStringLabel_0003
+   65     PARAMETER          0,      t0014
+   66     FCNCALL        0x1cd8870     print_string
+   67     RESULWORD      t0015
+   68     GOTO           __GeneratedLabel_0008
+   69     GENLABEL       __GeneratedLabel_0007
+   70     ADDRESSOF      t0000,      0x1cd8e50     i
+   71     LOADWORD       t0003,      t0000
+   72     LI             t0001,          5
+   73     REM            t0002,      t0003,      t0001
+   74     LOGICALNOT     t0004,      t0002
+   75     GOTOIFALSE     t0004,      __GeneratedLabel_0009
+   76     ADDRESSOF      t0006,      __GeneratedStringLabel_0004
+   77     PARAMETER          0,      t0006
+   78     FCNCALL        0x1cd8870     print_string
+   79     RESULWORD      t0007
+   80     GOTO           __GeneratedLabel_0010
+   81     GENLABEL       __GeneratedLabel_0009
+   82     ADDRESSOF      t0000,      0x1cd8e50     i
+   83     LOADWORD       t0003,      t0000
+   84     LI             t0001,          3
+   85     REM            t0002,      t0003,      t0001
+   86     LOGICALNOT     t0004,      t0002
+   87     GOTOIFALSE     t0004,      __GeneratedLabel_0011
+   88     ADDRESSOF      t0006,      __GeneratedStringLabel_0005
+   89     PARAMETER          0,      t0006
+   90     FCNCALL        0x1cd8870     print_string
+   91     RESULWORD      t0007
+   92     GOTO           __GeneratedLabel_0012
+   93     GENLABEL       __GeneratedLabel_0011
+   94     GENLABEL       __GeneratedLabel_0012
+   95     GOTO           __GeneratedLabel_0010
+   96     GENLABEL       __GeneratedLabel_0010
+   97     GOTO           __GeneratedLabel_0008
+   98     GENLABEL       __GeneratedLabel_0008
+   99     ADDRESSOF      t0007,      0x1cd8e50     i
+  100     LOADWORD       t0009,      t0007
+  101     LI             t0008,          1
+  102     ADD            t0010,      t0009,      t0008
+  103     STORWORD       t0007,      t0010
+  104     GOTO           __GeneratedLabel_0003
+  105     GENLABEL       __GeneratedLabel_0004
+  106     GOTO           __GeneratedLabel_0002
+  107     GENLABEL       __GeneratedLabel_0002
+  108     GENLABEL       __GeneratedLabel_0000
+  109     PROCEND        0x1cd8dc0     print_fizz_buzz
+  110     PROCBEGIN      0x1cd9190     main
+  111     NOP       
+  112     ADDRESSOF      t0001,      __GeneratedStringLabel_0006
+  113     PARAMETER          0,      t0001
+  114     FCNCALL        0x1cd8870     print_string
+  115     RESULWORD      t0002
+  116     ADDRESSOF      t0000,      0x1cd9220     length
+  117     FCNCALL        0x1cd8be0     read_int
+  118     RESULWORD      t0002
+  119     STORWORD       t0000,      t0002
+  120     ADDRESSOF      t0001,      0x1cd9220     length
+  121     LOADWORD       t0002,      t0001
+  122     PARAMETER          0,      t0002
+  123     FCNCALL        0x1cd8dc0     print_fizz_buzz
+  124     RESULWORD      t0003
+  125     GENLABEL       __GeneratedLabel_0013
+  126     PROCEND        0x1cd9190     main
+
+================== MIPS ==================
+
+.data
+__GeneratedStringLabel_0000: .asciiz "Please enter a number greater than zero..\n"
+__GeneratedStringLabel_0001: .asciiz "=== Number: "
+__GeneratedStringLabel_0002: .asciiz "=== \n"
+__GeneratedStringLabel_0003: .asciiz "FizzBuzz\n"
+__GeneratedStringLabel_0004: .asciiz "Fizz\n"
+__GeneratedStringLabel_0005: .asciiz "Buzz\n"
+__GeneratedStringLabel_0006: .asciiz "Please enter a number: "
+
+.text
+.globl main
+
+print_fizz_buzz:
+	#To start off, we need storage space for
+	# s0 to s7 (32 bytes), 
+	# a0 - a3 (16 bytes), 
+	# t0 - t9 (40 bytes), 
+	# the old stack frame pointer $fp (4 bytes), 
+	# the return address $ra (4 bytes), 
+	# one reserved word (4 bytes). 
+	# The minimum space needed = 100 bytes 
+      addi        $sp,        $sp,       -112
+        sw        $fp,    52($sp)
+        sw        $ra,    56($sp)
+        or        $fp,        $sp,         $0
+        sw        $a0,     4($fp)
+        sw        $a1,     8($fp)
+        sw        $a2,    12($fp)
+        sw        $a3,    16($fp)
+        sw        $s0,    20($fp)
+        sw        $s1,    24($fp)
+        sw        $s2,    28($fp)
+        sw        $s3,    32($fp)
+        sw        $s4,    36($fp)
+        sw        $s5,    40($fp)
+        sw        $s6,    44($fp)
+        sw        $s7,    48($fp)
+        la        $08,    100($fp)
+        la        $09,    4($fp)
+        lw        $10,       0($09)
+        sw        $10,      0($08)
+        la        $08,    100($fp)
+        lw        $11,       0($08)
+        li        $09,          1
+      sltu        $10,        $11,        $09
+      beqz        $10,__GeneratedLabel_0001
+        la        $13, __GeneratedStringLabel_0000
+        or        $a0,        $13,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $14,        $v0,         $0
+         b __GeneratedLabel_0002
+
+__GeneratedLabel_0001:
+        la        $08,    104($fp)
+        li        $09,          1
+        sw        $09,      0($08)
+
+__GeneratedLabel_0003:
+        la        $10,    104($fp)
+        lw        $13,       0($10)
+        la        $11,    100($fp)
+        lw        $14,       0($11)
+       sle        $12,        $13,        $14
+      beqz        $12,__GeneratedLabel_0004
+        la        $20, __GeneratedStringLabel_0001
+        or        $a0,        $20,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $21,        $v0,         $0
+        la        $09,    104($fp)
+        lw        $10,       0($09)
+        or        $a0,        $10,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           1 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $11,        $v0,         $0
+        la        $09, __GeneratedStringLabel_0002
+        or        $a0,        $09,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $10,        $v0,         $0
+        la        $08,    104($fp)
+        lw        $11,       0($08)
+        li        $09,          3
+      divu        $11,       $09
+      mfhi        $10
+       seq        $12,       $10,        $0
+
+      beqz        $12,__GeneratedLabel_0005
+        la        $13,    104($fp)
+        lw        $16,       0($13)
+        li        $14,          5
+      divu        $16,       $14
+      mfhi        $15
+       seq        $17,       $15,        $0
+
+      beqz        $17,__GeneratedLabel_0005
+        li        $18,          1
+        or        $20,        $18,         $0
+         b __GeneratedLabel_0006
+
+__GeneratedLabel_0005:
+        li        $19,          0
+        or        $20,        $19,         $0
+
+__GeneratedLabel_0006:
+      beqz        $20,__GeneratedLabel_0007
+        la        $22, __GeneratedStringLabel_0003
+        or        $a0,        $22,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $23,        $v0,         $0
+         b __GeneratedLabel_0008
+
+__GeneratedLabel_0007:
+        la        $08,    104($fp)
+        lw        $11,       0($08)
+        li        $09,          5
+      divu        $11,       $09
+      mfhi        $10
+       seq        $12,       $10,        $0
+
+      beqz        $12,__GeneratedLabel_0009
+        la        $14, __GeneratedStringLabel_0004
+        or        $a0,        $14,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $15,        $v0,         $0
+         b __GeneratedLabel_0010
+
+__GeneratedLabel_0009:
+        la        $08,    104($fp)
+        lw        $11,       0($08)
+        li        $09,          3
+      divu        $11,       $09
+      mfhi        $10
+       seq        $12,       $10,        $0
+
+      beqz        $12,__GeneratedLabel_0011
+        la        $14, __GeneratedStringLabel_0005
+        or        $a0,        $14,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $15,        $v0,         $0
+         b __GeneratedLabel_0012
+
+__GeneratedLabel_0011:
+
+__GeneratedLabel_0012:
+         b __GeneratedLabel_0010
+
+__GeneratedLabel_0010:
+         b __GeneratedLabel_0008
+
+__GeneratedLabel_0008:
+        la        $15,    104($fp)
+        lw        $17,       0($15)
+        li        $16,          1
+      addu        $18,        $17,        $16
+        sw        $18,      0($15)
+         b __GeneratedLabel_0003
+
+__GeneratedLabel_0004:
+         b __GeneratedLabel_0002
+
+__GeneratedLabel_0002:
+
+__GeneratedLabel_0000:
+        lw        $s7,    48($fp)
+        lw        $s6,    44($fp)
+        lw        $s5,    40($fp)
+        lw        $s4,    36($fp)
+        lw        $s3,    32($fp)
+        lw        $s2,    28($fp)
+        lw        $s1,    24($fp)
+        lw        $s0,    20($fp)
+        lw        $ra,    56($sp)
+        lw        $fp,    52($sp)
+      addi        $sp,        $sp,        112
+        jr        $ra
+
+
+main:
+	#To start off, we need storage space for
+	# s0 to s7 (32 bytes), 
+	# a0 - a3 (16 bytes), 
+	# t0 - t9 (40 bytes), 
+	# the old stack frame pointer $fp (4 bytes), 
+	# the return address $ra (4 bytes), 
+	# one reserved word (4 bytes). 
+	# The minimum space needed = 100 bytes 
+      addi        $sp,        $sp,       -104
+        sw        $fp,    52($sp)
+        sw        $ra,    56($sp)
+        or        $fp,        $sp,         $0
+        sw        $a0,     4($fp)
+        sw        $a1,     8($fp)
+        sw        $a2,    12($fp)
+        sw        $a3,    16($fp)
+        sw        $s0,    20($fp)
+        sw        $s1,    24($fp)
+        sw        $s2,    28($fp)
+        sw        $s3,    32($fp)
+        sw        $s4,    36($fp)
+        sw        $s5,    40($fp)
+        sw        $s6,    44($fp)
+        sw        $s7,    48($fp)
+        la        $09, __GeneratedStringLabel_0006
+        or        $a0,        $09,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           4 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $10,        $v0,         $0
+        la        $08,    100($fp)
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+        li      $v0,           5 
+   syscall
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $10,        $v0,         $0
+        sw        $10,      0($08)
+        la        $09,    100($fp)
+        lw        $10,       0($09)
+        or        $a0,        $10,         $0
+
+	 #Save the t-registers 
+        sw        $t0,    60($fp)
+        sw        $t1,    64($fp)
+        sw        $t2,    68($fp)
+        sw        $t3,    72($fp)
+        sw        $t4,    76($fp)
+        sw        $t5,    80($fp)
+        sw        $t6,    84($fp)
+        sw        $t7,    88($fp)
+        sw        $t8,    92($fp)
+        sw        $t9,    96($fp)
+       jal print_fizz_buzz
+
+	 #Restore the t-registers
+        lw        $t9,    96($fp)
+        lw        $t8,    92($fp)
+        lw        $t7,    88($fp)
+        lw        $t6,    84($fp)
+        lw        $t5,    80($fp)
+        lw        $t4,    76($fp)
+        lw        $t3,    72($fp)
+        lw        $t2,    68($fp)
+        lw        $t1,    64($fp)
+        lw        $t0,    60($fp)
+        or        $11,        $v0,         $0
+
+__GeneratedLabel_0013:
+        lw        $s7,    48($fp)
+        lw        $s6,    44($fp)
+        lw        $s5,    40($fp)
+        lw        $s4,    36($fp)
+        lw        $s3,    32($fp)
+        lw        $s2,    28($fp)
+        lw        $s1,    24($fp)
+        lw        $s0,    20($fp)
+        lw        $ra,    56($sp)
+        lw        $fp,    52($sp)
+      addi        $sp,        $sp,        104
+        jr        $ra
+
+
+        jr        $ra

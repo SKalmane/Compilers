@@ -479,10 +479,8 @@ void type_convert_additive(struct node *binary_operation) {
   } else if (type_is_arithmetic(left_operand_type) && type_is_pointer(right_operand_type)) {
     switch(binary_operation->data.binary_operation.operation) {
     case BINOP_ADDITION:
-      node_get_result(binary_operation)->type = right_operand_type;
-      break;
     case BINOP_SUBTRACTION:
-      type_checking_num_errors++; printf("ERROR: operands of the subtraction expr are not compatible\n");
+      node_get_result(binary_operation)->type = right_operand_type;
       break;
     default:
       type_checking_num_errors++; printf("ERROR: operands of the additive expr are not compatible\n");
@@ -855,7 +853,7 @@ void type_assign_in_expression(struct node *expression) {
           type_pointer(type_basic(false, TYPE_WIDTH_CHAR, CONVERSION_RANK_CHAR));
       break;
     case NODE_TERNARY_OPERATION:
-      /* xxx: type_assign_in_ternary_operation(expression); */
+      type_assign_in_ternary_operation(expression);
       break;
     case NODE_STATEMENT:
       type_assign_in_statement(expression);

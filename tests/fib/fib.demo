@@ -1,0 +1,180 @@
+================= SYMBOLS ================
+File Scope Symbol table:
+
+  variable: main $0x209fa80
+       Type: Function Type 
+*** Begin Return type: *** 
+      Type: int
+===
+*** End Return type: *** 
+ Number of parameters: 2
+ === Parameter 1: 
+      Type: Array Type 
+*** Type of the array: *** 
+      Type: Pointer Type 
+  *** Begin Pointee *** 
+      Type: character
+===
+  *** End Pointee *** 
+  *** End Type of Array *** 
+Array Size: 0
+===
+ === Parameter 2: 
+      Type: int
+===
+===
+  variable: fib $0x209f740
+       Type: Function Type 
+*** Begin Return type: *** 
+      Type: int
+===
+*** End Return type: *** 
+ Number of parameters: 1
+ === Parameter 1: 
+      Type: int
+===
+===
+  variable: read_int $0x209f560
+       Type: Function Type 
+*** Begin Return type: *** 
+      Type: int
+===
+*** End Return type: *** 
+ Number of parameters: 1
+ === Parameter 1: 
+      Type: Void Type 
+===
+  variable: print_string $0x209f3d0
+       Type: Function Type 
+*** Begin Return type: *** 
+      Type: Void Type 
+*** End Return type: *** 
+ Number of parameters: 1
+ === Parameter 1: 
+      Type: Pointer Type 
+  *** Begin Pointee *** 
+      Type: character
+===
+  *** End Pointee *** 
+===
+  variable: print_int $0x209f1b0
+       Type: Function Type 
+*** Begin Return type: *** 
+      Type: Void Type 
+*** End Return type: *** 
+ Number of parameters: 1
+ === Parameter 1: 
+      Type: int
+===
+===
+
+
+=============== PARSE TREE ===============
+void ( print_int /* 0x209f1b0 */ (int  i /* 0x209f110 */ )  );
+void ( print_string /* 0x209f3d0 */ (char  *(s /* 0x209f330 */ ))  );
+int ( read_int /* 0x209f560 */ (void  )  );
+int  fib /* 0x209f740 */ (int  n /* 0x209f6a0 */ )  {
+return ( (n /* 0x209f6a0 */  < (int ) 2) )  ? ( n /* 0x209f6a0 */ ) : ( (fib /* 0x209f740 */ (, (n /* 0x209f6a0 */  - 1))  + fib /* 0x209f740 */ (, (n /* 0x209f6a0 */  - 2)) )) ;
+
+}
+
+int  main /* 0x209fa80 */ (int  argc /* 0x209f880 */ , char  *(argv /* 0x209f9e0 */ []))  {
+int ( x /* 0x209fb10 */  );
+print_string /* 0x209f3d0 */ (, "Hi! Please enter a number:") ;
+
+(x /* 0x209fb10 */  = read_int /* 0x209f560 */ () );
+
+print_string /* 0x209f3d0 */ (, "The fibonacci number for ") ;
+
+print_int /* 0x209f1b0 */ (, x /* 0x209fb10 */ ) ;
+
+print_string /* 0x209f3d0 */ (, " is: ") ;
+
+print_int /* 0x209f1b0 */ (, fib /* 0x209f740 */ (, x /* 0x209fb10 */ ) ) ;
+
+print_string /* 0x209f3d0 */ (, "
+") ;
+
+return 0;
+
+
+}
+
+
+=================== IR ===================
+    0     NOP       
+    1     NOP       
+    2     NOP       
+    3     PROCBEGIN      0x209f740     fib
+    4     ADDRESSOF      t0000,      0x209f6a0     n
+    5     LOADWORD       t0003,      t0000
+    6     LI             t0001,          2
+    7     NOP       
+    8     LESSTHAN       t0002,      t0003,      t0001
+    9     GOTOIFALSE     t0002,      __GeneratedLabel_0001
+   10     ADDRESSOF      t0004,      0x209f6a0     n
+   11     LOADWORD       t0005,      t0004
+   12     COPY           t0006,      t0005
+   13     GOTO           __GeneratedLabel_0002
+   14     GENLABEL       __GeneratedLabel_0001
+   15     ADDRESSOF      t0008,      0x209f6a0     n
+   16     LOADWORD       t0011,      t0008
+   17     LI             t0009,          1
+   18     SUB            t0010,      t0011,      t0009
+   19     PARAMETER          0,      t0010
+   20     FCNCALL        0x209f740     fib
+   21     RESULWORD      t0012
+   22     ADDRESSOF      t0014,      0x209f6a0     n
+   23     LOADWORD       t0017,      t0014
+   24     LI             t0015,          2
+   25     SUB            t0016,      t0017,      t0015
+   26     PARAMETER          0,      t0016
+   27     FCNCALL        0x209f740     fib
+   28     RESULWORD      t0018
+   29     ADD            t0019,      t0012,      t0018
+   30     COPY           t0006,      t0019
+   31     GENLABEL       __GeneratedLabel_0002
+   32     RETURNWORD     t0006
+   33     GOTO           __GeneratedLabel_0000
+   34     GENLABEL       __GeneratedLabel_0000
+   35     PROCEND        0x209f740     fib
+   36     PROCBEGIN      0x209fa80     main
+   37     NOP       
+   38     ADDRESSOF      t0001,      __GeneratedStringLabel_0000
+   39     PARAMETER          0,      t0001
+   40     FCNCALL        0x209f3d0     print_string
+   41     RESULWORD      t0002
+   42     ADDRESSOF      t0000,      0x209fb10     x
+   43     FCNCALL        0x209f560     read_int
+   44     RESULWORD      t0002
+   45     STORWORD       t0000,      t0002
+   46     ADDRESSOF      t0001,      __GeneratedStringLabel_0001
+   47     PARAMETER          0,      t0001
+   48     FCNCALL        0x209f3d0     print_string
+   49     RESULWORD      t0002
+   50     ADDRESSOF      t0001,      0x209fb10     x
+   51     LOADWORD       t0002,      t0001
+   52     PARAMETER          0,      t0002
+   53     FCNCALL        0x209f1b0     print_int
+   54     RESULWORD      t0003
+   55     ADDRESSOF      t0001,      __GeneratedStringLabel_0002
+   56     PARAMETER          0,      t0001
+   57     FCNCALL        0x209f3d0     print_string
+   58     RESULWORD      t0002
+   59     ADDRESSOF      t0002,      0x209fb10     x
+   60     LOADWORD       t0003,      t0002
+   61     PARAMETER          0,      t0003
+   62     FCNCALL        0x209f740     fib
+   63     RESULWORD      t0004
+   64     PARAMETER          0,      t0004
+   65     FCNCALL        0x209f1b0     print_int
+   66     RESULWORD      t0005
+   67     ADDRESSOF      t0001,      __GeneratedStringLabel_0003
+   68     PARAMETER          0,      t0001
+   69     FCNCALL        0x209f3d0     print_string
+   70     RESULWORD      t0002
+   71     LI             t0000,          0
+   72     RETURNWORD     t0000
+   73     GOTO           __GeneratedLabel_0003
+   74     GENLABEL       __GeneratedLabel_0003
+   75     PROCEND        0x209fa80     main
